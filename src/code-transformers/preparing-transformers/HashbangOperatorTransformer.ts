@@ -12,6 +12,11 @@ import { AbstractCodeTransformer } from '../AbstractCodeTransformer';
 @injectable()
 export class HashbangOperatorTransformer extends AbstractCodeTransformer {
     /**
+     * @type {RegExp}
+     */
+    private static readonly hashbangOperatorRegExp: RegExp = /^(\s*)#!.*(?:\r?\n)*/;
+
+    /**
      * @type {string | null}
      */
     private hashbangOperatorLine: string | null = null;
@@ -52,15 +57,22 @@ export class HashbangOperatorTransformer extends AbstractCodeTransformer {
      * @returns {string}
      */
     private removeAndSaveHashbangOperatorLine(code: string): string {
-        return code
-            .replace(/^#!.*$(\r?\n)*/m, (substring: string) => {
-                if (substring) {
-                    this.hashbangOperatorLine = substring;
-                }
+        const match: RegExpMatchArray | null = code.match(HashbangOperatorTransformer.hashbangOperatorRegExp);
 
-                return '';
-            })
-            .trim();
+        if (!match) {
+            return code;
+        }
+
+        const [hashbangOperatorSubstring, leadingWhitespacesSubstring] = match;
+
+        // an indented hashbang operator is an invalid one, so it is removed without being appended back
+        const isValidHashbangOperator: boolean = !/[^\r\n]/.test(leadingWhitespacesSubstring);
+
+        if (isValidHashbangOperator) {
+            this.hashbangOperatorLine = hashbangOperatorSubstring.slice(leadingWhitespacesSubstring.length);
+        }
+
+        return code.slice(hashbangOperatorSubstring.length);
     }
 
     /**
