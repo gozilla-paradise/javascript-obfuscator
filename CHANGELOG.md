@@ -1,5 +1,9 @@
 Change Log
 
+v5.6.0
+---
+* Pro API: `obfuscatePro` now fall back to the basic local obfuscation API when no Pro feature (`vmObfuscation` or `parseHtml`) is enabled, instead of throwing an `ApiError`
+
 v5.5.1
 ---
 * Fixed leading whitespace of the source code being stripped without being reflected in the source map, shifting all `sourcesContent` and original position mappings. Fixes https://github.com/javascript-obfuscator/javascript-obfuscator/issues/1437

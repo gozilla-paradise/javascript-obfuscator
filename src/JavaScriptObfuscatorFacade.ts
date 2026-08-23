@@ -91,15 +91,15 @@ class JavaScriptObfuscatorFacade {
 
     /**
      * Obfuscate code using the Pro API (obfuscator.io)
-     * This method requires a valid API token from obfuscator.io and only works with VM obfuscation.
+     * Falls back to the basic obfuscation API when no Pro feature is enabled.
      * Only available in Node.js environment.
      *
      * @param {string} sourceCode - Source code to obfuscate
-     * @param {TInputOptions} inputOptions - Obfuscation options (must include vmObfuscation: true)
+     * @param {TInputOptions} inputOptions - Obfuscation options
      * @param {IProApiConfig} proApiConfig - Pro API configuration including API token
      * @param {TProApiProgressCallback} onProgress - Optional callback for progress updates (streaming mode only)
      * @returns {Promise<IProObfuscationResult>} - Promise resolving to obfuscation result
-     * @throws {ApiError} - If API returns an error or vmObfuscation is not enabled
+     * @throws {ApiError} - If the Pro API returns an error
      */
     public static async obfuscatePro(
         sourceCode: string,
@@ -114,6 +114,11 @@ class JavaScriptObfuscatorFacade {
         }
 
         const { ProApiClient } = await import('./pro-api/ProApiClient');
+
+        if (!ProApiClient.hasProFeatures(inputOptions)) {
+            return JavaScriptObfuscatorFacade.obfuscate(sourceCode, inputOptions);
+        }
+
         const client = new ProApiClient(proApiConfig);
 
         return client.obfuscate(sourceCode, inputOptions, onProgress);

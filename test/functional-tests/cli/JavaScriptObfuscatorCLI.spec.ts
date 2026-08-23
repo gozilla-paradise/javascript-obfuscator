@@ -1470,28 +1470,30 @@ describe('JavaScriptObfuscatorCLI', function (): void {
                 });
             });
 
-            describe('Variant #4: Pro API token without Pro features throws error', () => {
-                it('should throw error when --pro-api-token is provided but no Pro features enabled', async () => {
+            describe('Variant #4: Pro API token without Pro features falls back to local obfuscation', () => {
+                it('should obfuscate locally when --pro-api-token is provided but no Pro features enabled', async () => {
                     const outputPath = path.join(outputDirName, 'local-output.js');
 
-                    try {
-                        await JavaScriptObfuscatorCLI.obfuscate([
-                            'node',
-                            'javascript-obfuscator',
-                            proApiFilePath,
-                            '--output',
-                            outputPath,
-                            '--pro-api-token',
-                            'test-token-123',
-                            '--compact',
-                            'true'
-                        ]);
-                        assert.fail('Expected error was not thrown');
-                    } catch (error) {
-                        assert.include(
-                            (error as Error).message,
-                            'Obfuscator.io Pro obfuscation works only when Pro features set.'
-                        );
+                    fetchStub = sinon.stub(global, 'fetch');
+
+                    await JavaScriptObfuscatorCLI.obfuscate([
+                        'node',
+                        'javascript-obfuscator',
+                        proApiFilePath,
+                        '--output',
+                        outputPath,
+                        '--pro-api-token',
+                        'test-token-123',
+                        '--compact',
+                        'true'
+                    ]);
+
+                    assert.isFalse(fetchStub.called, 'Pro API should not be called without Pro features');
+                    assert.isTrue(fs.existsSync(outputPath), 'output file should be written locally');
+                    assert.isNotEmpty(fs.readFileSync(outputPath, 'utf8'));
+
+                    if (fs.existsSync(outputPath)) {
+                        fs.unlinkSync(outputPath);
                     }
                 });
             });

@@ -29,30 +29,35 @@ describe('JavaScriptObfuscator.obfuscatePro', () => {
         }
     });
 
-    describe('validation', () => {
-        it('should throw ApiError when no Pro features are enabled', async () => {
-            try {
-                await JavaScriptObfuscator.obfuscatePro(
-                    'const a = 1;',
-                    { vmObfuscation: false },
-                    { apiToken: 'test-token' }
-                );
-                assert.fail('Should have thrown an error');
-            } catch (error) {
-                assert.instanceOf(error, ApiError);
-                assert.include((error as ApiError).message, 'Pro');
-                assert.equal((error as ApiError).statusCode, 400);
-            }
+    describe('fallback to local obfuscation', () => {
+        it('should fall back to the local obfuscation API when no Pro features are enabled', async () => {
+            const result = await JavaScriptObfuscator.obfuscatePro(
+                'const a = 1;',
+                { vmObfuscation: false },
+                { apiToken: 'test-token' }
+            );
+
+            assert.equal(
+                result.getObfuscatedCode(),
+                JavaScriptObfuscator.obfuscate('const a = 1;', { vmObfuscation: false }).getObfuscatedCode()
+            );
         });
 
-        it('should throw ApiError when options are empty', async () => {
-            try {
-                await JavaScriptObfuscator.obfuscatePro('const a = 1;', {}, { apiToken: 'test-token' });
-                assert.fail('Should have thrown an error');
-            } catch (error) {
-                assert.instanceOf(error, ApiError);
-                assert.include((error as ApiError).message, 'Pro');
-            }
+        it('should fall back to the local obfuscation API when options are empty', async () => {
+            const result = await JavaScriptObfuscator.obfuscatePro('const a = 1;', {}, { apiToken: 'test-token' });
+
+            assert.equal(
+                result.getObfuscatedCode(),
+                JavaScriptObfuscator.obfuscate('const a = 1;', {}).getObfuscatedCode()
+            );
+        });
+
+        it('should not call the Pro API when falling back to local obfuscation', async () => {
+            fetchStub = sinon.stub(global, 'fetch');
+
+            await JavaScriptObfuscator.obfuscatePro('const a = 1;', {}, { apiToken: 'test-token' });
+
+            assert.isFalse(fetchStub.called);
         });
 
         it('should accept vmObfuscation as a valid Pro feature', async () => {

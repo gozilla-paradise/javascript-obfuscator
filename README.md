@@ -348,7 +348,7 @@ console.log(result.getObfuscatedCode());
 **Parameters:**
 
 * `sourceCode` (`string`) – source code to obfuscate
-* `options` (`Object`) – obfuscation options. **Must include at least one Pro feature: `vmObfuscation: true` or `parseHtml: true`**
+* `options` (`Object`) – obfuscation options. To use the Pro API, include at least one Pro feature: `vmObfuscation: true` or `parseHtml: true`. When no Pro feature is enabled, `obfuscatePro` falls back to the basic (local) obfuscation API.
 * `apiConfig` (`Object`) – Pro API configuration:
   * `apiToken` (`string`, required) – your API token from obfuscator.io
   * `timeout` (`number`, optional) – request timeout in ms (default: `300000` - 5 minutes)
@@ -357,8 +357,9 @@ console.log(result.getObfuscatedCode());
 
 **Returns:** `Promise<ObfuscationResult>`
 
+> **Note:** When no Pro feature (`vmObfuscation` or `parseHtml`) is enabled, the Pro API is not needed, so `obfuscatePro` falls back to the basic (local) obfuscation API and no API request is made.
+
 **Throws:** `ApiError` if:
-- No Pro features (`vmObfuscation` or `parseHtml`) are enabled in options
 - API token is invalid or expired
 - API request fails
 

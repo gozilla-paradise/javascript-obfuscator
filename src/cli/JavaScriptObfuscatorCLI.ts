@@ -615,10 +615,9 @@ export class JavaScriptObfuscatorCLI implements IInitializable {
             })
         };
 
-        // Use Pro API if token is provided and Pro features are enabled
         const proApiToken = this.inputCLIOptions.proApiToken;
 
-        if (proApiToken) {
+        if (proApiToken && ProApiClient.hasProFeatures(options)) {
             await this.processSourceCodeWithProApi(sourceCode, outputCodePath, options, proApiToken);
 
             return;
