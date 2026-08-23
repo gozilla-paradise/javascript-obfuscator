@@ -250,6 +250,12 @@ export class JavaScriptObfuscatorCLI implements IInitializable {
             )
             .option('--identifiers-prefix <string>', 'Sets prefix for all global identifiers')
             .option(
+                '--random-identifiers-prefix <boolean>',
+                'Appends a seeded random prefix to all global identifiers to avoid collisions ' +
+                    'between separately obfuscated bundles (Default: false)',
+                BooleanSanitizer
+            )
+            .option(
                 '--identifiers-dictionary <list> (comma separated, without whitespaces)',
                 'Identifiers dictionary (comma separated) for `--identifier-names-generator dictionary` option',
                 ArraySanitizer
@@ -403,6 +409,11 @@ export class JavaScriptObfuscatorCLI implements IInitializable {
                     `Values: ${CLIUtils.stringifyOptionAvailableValues(ObfuscationTarget)}. ` +
                     `Default: ${ObfuscationTarget.Browser}`
             )
+            .option(
+                '--browser-environment <string>',
+                'Declares the transport scheme the production build is served over ' +
+                    '(only takes effect with `vmSelfDefending`). Values: http, https'
+            )
             .option('--transform-object-keys <boolean>', 'Enables transformation of object keys', BooleanSanitizer)
             .option(
                 '--unicode-escape-sequence <boolean>',
@@ -449,6 +460,12 @@ export class JavaScriptObfuscatorCLI implements IInitializable {
                 'Controls how functions are selected for VM obfuscation. ' +
                     `Values: ${CLIUtils.stringifyOptionAvailableValues(VMTargetFunctionsMode)}. ` +
                     `Default: ${VMTargetFunctionsMode.Root}`
+            )
+            .option(
+                '--vm-force-compile-dynamic-code <boolean>',
+                'Forces VM bytecoding of functions containing `eval` / `new Function(...)` calls ' +
+                    'instead of skipping them (Default: false)',
+                BooleanSanitizer
             )
             .option(
                 '--vm-wrap-top-level-initializers <boolean>',
@@ -511,6 +528,12 @@ export class JavaScriptObfuscatorCLI implements IInitializable {
                 BooleanSanitizer
             )
             .option(
+                '--vm-self-defending <boolean>',
+                'Adds tamper detection, anti-hooking, and anti-reverse-engineering protection ' +
+                    'to the VM runtime (Default: false)',
+                BooleanSanitizer
+            )
+            .option(
                 '--vm-runtime-opcode-derivation <boolean>',
                 'Enables runtime opcode derivation from seeds instead of static mappings (Default: false)',
                 BooleanSanitizer
@@ -518,6 +541,18 @@ export class JavaScriptObfuscatorCLI implements IInitializable {
             .option(
                 '--vm-stateful-opcodes <boolean>',
                 'Enables position-based stateful opcode decoding to prevent pattern matching (Default: false)',
+                BooleanSanitizer
+            )
+            .option(
+                '--vm-call-context-opcodes <boolean>',
+                'Makes a protected function depend on its real call sites so it cannot be lifted out ' +
+                    'and analyzed on its own (experimental, Default: false)',
+                BooleanSanitizer
+            )
+            .option(
+                '--vm-async-executor <boolean>',
+                'Enables the asynchronous VM executor, allowing an asynchronous bytecode array ' +
+                    'encoding key getter (Default: false)',
                 BooleanSanitizer
             )
             .option(
@@ -539,6 +574,28 @@ export class JavaScriptObfuscatorCLI implements IInitializable {
                 '--vm-compact-dispatcher <boolean>',
                 'Uses a single unified dispatcher for both sync and generator execution, reducing code size (Default: false)',
                 BooleanSanitizer
+            )
+            .option(
+                '--vm-register-based <boolean>',
+                'Switches the VM to a register-based execution model for better runtime performance ' +
+                    'at a slight size cost (experimental, Default: false)',
+                BooleanSanitizer
+            )
+            .option(
+                '--vm-string-array-bytecode-only <boolean>',
+                'Extracts only bytecode strings to the string array instead of all strings; ' +
+                    'force-enables `stringArray` (Default: false)',
+                BooleanSanitizer
+            )
+            .option(
+                '--vm-domain-lock <list> (comma separated, without whitespaces)',
+                'List of domains and sub-domains the VM-obfuscated code is locked to (comma separated)',
+                ArraySanitizer
+            )
+            .option(
+                '--vm-domain-lock-redirect-url <string>',
+                'URL to redirect the browser to when VM-obfuscated code runs on a non-allowed domain ' +
+                    '(Default: about:blank)'
             )
             .option(
                 '--vm-bytecode-format <string>',
