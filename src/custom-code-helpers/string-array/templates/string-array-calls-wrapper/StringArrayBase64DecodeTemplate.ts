@@ -10,6 +10,7 @@ export function StringArrayBase64DecodeTemplate(randomGenerator: IRandomGenerato
     const initializedIdentifier: string = randomGenerator.getRandomString(identifierLength);
     const base64Identifier: string = randomGenerator.getRandomString(identifierLength);
     const dataIdentifier: string = randomGenerator.getRandomString(identifierLength);
+    const cacheStateIdentifier: string = randomGenerator.getRandomString(identifierLength);
 
     return `
         if ({stringArrayCallsWrapperName}.${initializedIdentifier} === undefined) {
@@ -17,19 +18,24 @@ export function StringArrayBase64DecodeTemplate(randomGenerator: IRandomGenerato
             {stringArrayCallsWrapperName}.${base64Identifier} = {atobFunctionName};
 
             {stringArrayCallsWrapperName}.${dataIdentifier} = {};
-            
+
             {stringArrayCallsWrapperName}.${initializedIdentifier} = true;
         }
-                  
+
         const firstValue = stringArray[0];
-        const cacheKey = index + firstValue;
-        const cachedValue = {stringArrayCallsWrapperName}.${dataIdentifier}[cacheKey];
-        
-        if (!cachedValue) {
+
+        if ({stringArrayCallsWrapperName}.${cacheStateIdentifier} !== firstValue) {
+            {stringArrayCallsWrapperName}.${dataIdentifier} = {};
+            {stringArrayCallsWrapperName}.${cacheStateIdentifier} = firstValue;
+        }
+
+        const cachedValue = {stringArrayCallsWrapperName}.${dataIdentifier}[index];
+
+        if (cachedValue === undefined) {
             {selfDefendingCode}
-            
+
             value = {stringArrayCallsWrapperName}.${base64Identifier}(value);
-            {stringArrayCallsWrapperName}.${dataIdentifier}[cacheKey] = value;
+            {stringArrayCallsWrapperName}.${dataIdentifier}[index] = value;
         } else {
             value = cachedValue;
         }
