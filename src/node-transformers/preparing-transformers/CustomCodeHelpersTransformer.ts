@@ -31,7 +31,8 @@ export class CustomCodeHelpersTransformer extends AbstractNodeTransformer {
      */
     public override readonly runAfter: NodeTransformer[] = [
         NodeTransformer.ParentificationTransformer,
-        NodeTransformer.VariablePreserveTransformer
+        NodeTransformer.VariablePreserveTransformer,
+        NodeTransformer.VMObfuscationTransformer
     ];
 
     /**

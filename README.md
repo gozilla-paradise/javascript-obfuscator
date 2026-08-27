@@ -26,11 +26,10 @@
 | Encryption | ✅ [`stringArrayEncoding`](#stringarrayencoding) (base64/rc4 on extracted strings) | ✅ [`vmBytecodeEncoding`](#vmbytecodeencoding) (per-instruction encoding), [`vmBytecodeArrayEncoding`](#vmbytecodeArrayEncoding) (whole bytecode array as single block)                                        |
 | Anti-debugging | ✅ `debugProtection` (freezes browser DevTools) | ✅ [`vmDebugProtection`](#vmdebugProtection) (multi-layered anti-debugging and anti-analysis defenses)                                                                                                         |
 | Tamper detection | ✅ `selfDefending` (breaks if beautified) | ✅ [`vmSelfDefending`](#vmselfdefending) (multi-layered tamper detection, anti-hooking, anti-reverse-engineering protection)                                                                                   |
-| Runs offline, no network | ✅ | ❌ uses obfuscator.io API (requires token)                                                                                                                                                                     |
+| Runs offline, no network | ✅ | ✅ |
 
-[Visit Obfuscator.io](https://obfuscator.io) · [Pro API methods](#shield-pro-api-methods-vm-obfuscation)
+VM obfuscation and HTML dispatch run locally in this package. The synchronous `obfuscate` API and tokenless CLI are the only transports.
 
-This package provides access to Obfuscator.io API via CLI and Node.js API.
 
 ---
 
@@ -306,169 +305,41 @@ Returns an options object for the passed options preset name.
 
 ---
 
-## :shield: Pro API Methods (VM Obfuscation)
+## Local VM and HTML obfuscation
 
-The Pro API methods provide access to **VM-based bytecode obfuscation** through the [obfuscator.io](https://obfuscator.io) cloud service. VM obfuscation is the most advanced and secure form of code protection available, transforming your JavaScript functions into custom bytecode that runs on an embedded virtual machine.
-
-**Why VM Obfuscation?**
-- **Strongest protection**: Code is converted to bytecode that cannot be directly understood
-- **Anti-decompilation**: No standard JavaScript to reverse engineer
-- **Customizable VM**: Each obfuscation generates unique opcodes and VM structure
-- **Layered security**: Combine with other obfuscation options for defense in depth
-
-### Getting an API Token
-
-To use Pro API methods, you need a valid API token from [obfuscator.io](https://obfuscator.io):
-
-1. Create an account at [obfuscator.io](https://obfuscator.io)
-2. Subscribe to a Pro, Team, or Business plan that includes API access
-3. Generate your API token at [obfuscator.io/dashboard](https://obfuscator.io/dashboard)
-
-### `obfuscatePro(sourceCode, options, proApiConfig, onProgress?)` :new:
-
-**Async method** that obfuscates code using the Pro API with VM-based bytecode obfuscation.
+VM bytecode compilation is part of the ordinary synchronous API:
 
 ```javascript
 const JavaScriptObfuscator = require('javascript-obfuscator');
 
-const result = await JavaScriptObfuscator.obfuscatePro(
-    `function hello() { console.log("Hello World"); }`,
+const result = JavaScriptObfuscator.obfuscate(
+    'function price(q, p) { return q * p; }',
     {
-        vmObfuscation: true,  // Required!
-        compact: true
-    },
-    {
-        apiToken: 'your_javascript_obfuscator_pro_api_token'
+        vmObfuscation: true,
+        vmTargetFunctions: ['price'],
+        seed: 1
     }
 );
 
 console.log(result.getObfuscatedCode());
+console.log(result.getWarnings());
 ```
 
-**Parameters:**
+No token, upload, network request, alternate result type, or asynchronous build API is used. Legacy cloud APIs, progress callbacks, and token CLI flags were removed.
 
-* `sourceCode` (`string`) – source code to obfuscate
-* `options` (`Object`) – obfuscation options. To use the Pro API, include at least one Pro feature: `vmObfuscation: true` or `parseHtml: true`. When no Pro feature is enabled, `obfuscatePro` falls back to the basic (local) obfuscation API.
-* `apiConfig` (`Object`) – Pro API configuration:
-  * `apiToken` (`string`, required) – your API token from obfuscator.io
-  * `timeout` (`number`, optional) – request timeout in ms (default: `300000` - 5 minutes)
-  * `version` (`string`, optional) – Obfuscator.io version to use (e.g., `'5.0.3'`). Defaults to latest version if not specified.
-* `onProgress` (`function`, optional) – callback for progress updates during obfuscation
-
-**Returns:** `Promise<ObfuscationResult>`
-
-> **Note:** When no Pro feature (`vmObfuscation` or `parseHtml`) is enabled, the Pro API is not needed, so `obfuscatePro` falls back to the basic (local) obfuscation API and no API request is made.
-
-**Throws:** `ApiError` if:
-- API token is invalid or expired
-- API request fails
-
-### Pro API with Specific Version
-
-You can specify which obfuscator version to use via the `version` option:
-
-```javascript
-const result = await JavaScriptObfuscator.obfuscatePro(
-    sourceCode,
-    {
-        vmObfuscation: true
-    },
-    {
-        apiToken: 'your_javascript_obfuscator_pro_api_token',
-        version: '5.0.3'  // Use specific version
-    }
-);
-```
-
-### Pro API with Progress Updates
-
-The API uses streaming mode to provide real-time progress updates during obfuscation:
-
-```javascript
-const result = await JavaScriptObfuscator.obfuscatePro(
-    sourceCode,
-    {
-        vmObfuscation: true
-    },
-    {
-        apiToken: 'your_javascript_obfuscator_pro_api_token'
-    },
-    (message) => {
-        console.log('Progress:', message);
-        // Output: "Validating request...", "Authenticating...", "Obfuscating...", etc.
-    }
-);
-```
-
-### Checking for Pro Features
-
-Use `ProApiClient.hasProFeatures()` to check if options require the Pro API:
-
-```javascript
-const { ProApiClient } = require('javascript-obfuscator');
-
-const options = { vmObfuscation: true, compact: true };
-
-if (ProApiClient.hasProFeatures(options)) {
-    // Use obfuscatePro() - requires API token
-    const result = await JavaScriptObfuscator.obfuscatePro(sourceCode, options, { apiToken });
-} else {
-    // Use regular obfuscate() - no API token needed
-    const result = JavaScriptObfuscator.obfuscate(sourceCode, options);
-}
-```
-
-Pro features include:
-- `vmObfuscation: true` – VM-based bytecode obfuscation
-- `parseHtml: true` – HTML parsing with inline JavaScript obfuscation
-
-### Error Handling
-
-```javascript
-const { ApiError } = require('javascript-obfuscator');
-
-try {
-    const result = await JavaScriptObfuscator.obfuscatePro(sourceCode, options, config);
-} catch (error) {
-    if (error instanceof ApiError) {
-        console.error(`API Error (${error.statusCode}): ${error.message}`);
-    } else {
-        throw error;
-    }
-}
-```
-
-### CLI Usage with Pro API
-
-You can also use Pro API features directly from the CLI by providing your API token:
+The CLI uses the same local engine:
 
 ```sh
-javascript-obfuscator input.js --pro-api-token YOUR_API_TOKEN --vm-obfuscation true -o output.js
+javascript-obfuscator input.js --vm-obfuscation true --vm-target-functions price -o output.js
+javascript-obfuscator input.html --parse-html true -o output.html
 ```
 
-With a specific obfuscator version:
+HTML processing changes only nonempty inline, non-module `<script data-javascript-obfuscator>` bodies. Unmarked, external, module, empty, and surrounding markup bytes remain unchanged. HTML output always has an empty source map and a null identifier cache; no map or cache sidecar is written.
 
-```sh
-javascript-obfuscator input.js --pro-api-token YOUR_API_TOKEN --pro-api-version 5.0.3 --vm-obfuscation true -o output.js
-```
-
-**CLI Options:**
-- `--pro-api-token <string>` – Your API token from [obfuscator.io](https://obfuscator.io)
-- `--pro-api-version <string>` – Obfuscator.io version to use (optional, defaults to latest)
-
-The CLI automatically detects when Pro features (`vmObfuscation` or `parseHtml`) are enabled and routes the request through the Pro API.
-
-### Large File Uploads
-
-For files larger than ~4MB, the Pro API uses client-side uploads to Vercel Blob storage. To enable this feature, install the optional `@vercel/blob` package:
-
-```sh
-npm install @vercel/blob
-```
-
-Without this package, large file obfuscation will fail with an error message prompting you to install it.
+`ObfuscationResult.getWarnings()` returns immutable warning objects with `code`, `message`, `functionName`, `location`, and an optional 1-based HTML `scriptIndex`.
 
 ---
+
 
 ## CLI usage
 
@@ -547,7 +418,6 @@ When using CLI this prefix will be added automatically.
 
 ## JavaScript Obfuscator Options
 
-> :shield: **Looking for VM obfuscation?** Options like `vmObfuscation`, `parseHtml`, and every `vm*` option are Pro-only and require an API token from [obfuscator.io](https://obfuscator.io). Use them via the [`obfuscatePro()`](#shield-pro-api-methods-vm-obfuscation) method, or the `--pro-api-token` CLI flag — see [Pro API Methods](#shield-pro-api-methods-vm-obfuscation).
 
 Following options are available for the JS Obfuscator:
 
@@ -672,8 +542,6 @@ Following options are available for the JS Obfuscator:
     --browser-environment <string> [http, https]
     --transform-object-keys <boolean>
     --unicode-escape-sequence <boolean>
-    --pro-api-token <string>
-    --pro-api-version <string>
     --vm-obfuscation <boolean>
     --vm-obfuscation-threshold <number>
     --vm-preprocess-identifiers <boolean>
@@ -1894,11 +1762,8 @@ The performance will be at a relatively normal level
 
 <!-- ##options-end## -->
 
-## Obfuscator.io Pro Options
+## Local VM Options
 
-> :warning: **The following VM obfuscation/Pro options are available only via the [Obfuscator.io Pro API](https://obfuscator.io/).**
->
-> To use these options, you need a Pro API token from [obfuscator.io](https://obfuscator.io) and must call the `obfuscatePro()` method instead of `obfuscate()`. See the [Pro API Methods](#shield-pro-api-methods-vm-obfuscation) section for details.
 
 ### `vmObfuscation`
 Type: `boolean` Default: `false`

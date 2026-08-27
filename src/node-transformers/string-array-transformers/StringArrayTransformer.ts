@@ -177,6 +177,10 @@ export class StringArrayTransformer extends AbstractNodeTransformer {
      * @returns {NodeGuards}
      */
     public transformNode(literalNode: ESTree.Literal, parentNode: ESTree.Node): ESTree.Node {
+        if (NodeMetadata.isVMIntegritySentinelNode(literalNode)) {
+            return literalNode;
+        }
+
         if (
             !NodeLiteralUtils.isStringLiteralNode(literalNode) ||
             NodeLiteralUtils.isProhibitedLiteralNode(literalNode, parentNode)

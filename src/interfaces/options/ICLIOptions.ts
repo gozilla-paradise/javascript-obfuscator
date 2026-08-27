@@ -5,7 +5,5 @@ export interface ICLIOptions extends IOptions {
     readonly exclude: string[];
     readonly identifierNamesCachePath: string;
     readonly output: string;
-    readonly proApiToken: string;
-    readonly proApiVersion: string;
     readonly version: string;
 }

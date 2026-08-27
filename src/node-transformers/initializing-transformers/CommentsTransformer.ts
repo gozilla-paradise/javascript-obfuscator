@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/member-ordering */
 import { inject, injectable, injectFromBase } from 'inversify';
 import { ServiceIdentifiers } from '../../container/ServiceIdentifiers';
 
@@ -9,6 +10,8 @@ import { IRandomGenerator } from '../../interfaces/utils/IRandomGenerator';
 import { IVisitor } from '../../interfaces/node-transformers/IVisitor';
 
 import { NodeTransformationStage } from '../../enums/node-transformers/NodeTransformationStage';
+
+import { VM_COMMENT_MARKER } from '../../constants/VMCommentMarker';
 
 import { AbstractNodeTransformer } from '../AbstractNodeTransformer';
 import { ConditionalCommentObfuscatingGuard } from '../preparing-transformers/obfuscating-guards/ConditionalCommentObfuscatingGuard';
@@ -93,13 +96,36 @@ export class CommentsTransformer extends AbstractNodeTransformer {
                 }
 
                 const commentIdx: number = comments.findIndex(
-                    (comment: ESTree.Comment) => comment.range && node.range && comment.range[0] < node.range[0]
+                    (comment: ESTree.Comment) =>
+                        comment.range && node.range && comment.range[0] < node.range[0]
                 );
 
                 if (commentIdx >= 0) {
-                    (isFirstNode ? rootNode : node).leadingComments = comments
+                    const attachedComments: ESTree.Comment[] = comments
                         .splice(commentIdx, comments.length - commentIdx)
                         .reverse();
+                    const vmComments: ESTree.Comment[] = attachedComments.filter(
+                        CommentsTransformer.isVMMarker
+                    );
+                    const ordinaryComments: ESTree.Comment[] = attachedComments.filter(
+                        (comment: ESTree.Comment) =>
+                            !CommentsTransformer.isVMMarker(comment)
+                    );
+
+                    if (vmComments.length > 0) {
+                        node.leadingComments = [
+                            ...(node.leadingComments ?? []),
+                            ...vmComments
+                        ];
+                    }
+
+                    if (ordinaryComments.length > 0) {
+                        const target: ESTree.Node = isFirstNode ? rootNode : node;
+                        target.leadingComments = [
+                            ...(target.leadingComments ?? []),
+                            ...ordinaryComments
+                        ];
+                    }
                 }
 
                 isFirstNode = false;
@@ -159,8 +185,37 @@ export class CommentsTransformer extends AbstractNodeTransformer {
      * @param {boolean} keepConditionalComment
      * @returns {boolean}
      */
+    private static isVMMarker(comment: ESTree.Comment): boolean {
+        return (
+            comment.type === 'Block' &&
+            comment.value.trim() === VM_COMMENT_MARKER
+        );
+    }
+
+    private static isUserscriptMetadata(comment: ESTree.Comment): boolean {
+        if (comment.type !== 'Line') {
+            return false;
+        }
+
+        const value: string = comment.value.trim();
+
+        return (
+            value === '==UserScript==' ||
+            value === '==/UserScript==' ||
+            value.startsWith('@')
+        );
+    }
+
     private filterComment(comment: ESTree.Comment, keepConditionalComment: boolean): boolean {
         if (keepConditionalComment && ConditionalCommentObfuscatingGuard.isConditionalComment(comment)) {
+            return true;
+        }
+
+        if (keepConditionalComment && CommentsTransformer.isVMMarker(comment)) {
+            return true;
+        }
+
+        if (CommentsTransformer.isUserscriptMetadata(comment)) {
             return true;
         }
 

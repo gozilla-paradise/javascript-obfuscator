@@ -28,7 +28,6 @@ import { ecmaVersion } from './constants/EcmaVersion';
 import { ASTParserFacade } from './ASTParserFacade';
 import { NodeGuards } from './node/NodeGuards';
 import { Utils } from './utils/Utils';
-import { AdvertisementUtils } from './utils/AdvertisementUtils';
 
 @injectable()
 export class JavaScriptObfuscator implements IJavaScriptObfuscator {
@@ -56,7 +55,10 @@ export class JavaScriptObfuscator implements IJavaScriptObfuscator {
     /**
      * @type {CodeTransformer[]}
      */
-    private static readonly codeTransformersList: CodeTransformer[] = [CodeTransformer.HashbangOperatorTransformer];
+    private static readonly codeTransformersList: CodeTransformer[] = [
+        CodeTransformer.HashbangOperatorTransformer,
+        CodeTransformer.VMIntegrityCodeTransformer
+    ];
 
     /**
      * @type {NodeTransformer[]}
@@ -96,7 +98,8 @@ export class JavaScriptObfuscator implements IJavaScriptObfuscator {
         NodeTransformer.TemplateLiteralTransformer,
         NodeTransformer.DirectivePlacementTransformer,
         NodeTransformer.VariableDeclarationsMergeTransformer,
-        NodeTransformer.VariablePreserveTransformer
+        NodeTransformer.VariablePreserveTransformer,
+        NodeTransformer.VMObfuscationTransformer
     ];
 
     /**
@@ -158,10 +161,6 @@ export class JavaScriptObfuscator implements IJavaScriptObfuscator {
      * @returns {IObfuscationResult}
      */
     public obfuscate(sourceCode: string): IObfuscationResult {
-        if (AdvertisementUtils.shouldShowAdvertisement()) {
-            this.logger.advertise(LoggingMessage.JavaScriptObfuscatorProAdFirstPart);
-            this.logger.advertise(LoggingMessage.JavaScriptObfuscatorProAdSecondPart);
-        }
 
         if (typeof sourceCode !== 'string') {
             sourceCode = '';
@@ -204,7 +203,11 @@ export class JavaScriptObfuscator implements IJavaScriptObfuscator {
      * @returns {Program}
      */
     private parseCode(sourceCode: string): ESTree.Program {
-        return ASTParserFacade.parse(sourceCode, JavaScriptObfuscator.parseOptions);
+        return ASTParserFacade.parse(
+            sourceCode,
+            JavaScriptObfuscator.parseOptions,
+            this.options.strictMode
+        );
     }
 
     /**

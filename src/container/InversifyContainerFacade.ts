@@ -21,23 +21,33 @@ import { simplifyingTransformersModule } from './modules/node-transformers/Simpl
 import { storagesModule } from './modules/storages/StoragesModule';
 import { stringArrayTransformersModule } from './modules/node-transformers/StringArrayTransformersModule';
 import { utilsModule } from './modules/utils/UtilsModule';
+import { vmModule } from './modules/vm/VMModule';
+
 
 import { TConstructor } from '../types/TConstructor';
 import { TInputOptions } from '../types/options/TInputOptions';
 
 import { ICodeTransformersRunner } from '../interfaces/code-transformers/ICodeTransformersRunner';
 import { IInversifyContainerFacade } from '../interfaces/container/IInversifyContainerFacade';
+import { IHtmlObfuscator } from '../interfaces/html/IHtmlObfuscator';
+
 import { IJavaScriptObfuscator } from '../interfaces/IJavaScriptObfsucator';
 import { ILogger } from '../interfaces/logger/ILogger';
 import { IObfuscationResult } from '../interfaces/source-code/IObfuscationResult';
+import { IObfuscationWarningsStorage } from '../interfaces/storages/IObfuscationWarningsStorage';
+
 import { ISourceCode } from '../interfaces/source-code/ISourceCode';
 import { INodeTransformersRunner } from '../interfaces/node-transformers/INodeTransformersRunner';
 
 import { CodeTransformersRunner } from '../code-transformers/CodeTransformersRunner';
 import { JavaScriptObfuscator } from '../JavaScriptObfuscator';
+import { HtmlObfuscator } from '../html/HtmlObfuscator';
+
 import { Logger } from '../logger/Logger';
 import { NodeTransformersRunner } from '../node-transformers/NodeTransformersRunner';
 import { ObfuscationResult } from '../source-code/ObfuscationResult';
+import { ObfuscationWarningsStorage } from '../storages/ObfuscationWarningsStorage';
+
 import { SourceCode } from '../source-code/SourceCode';
 
 export class InversifyContainerFacade implements IInversifyContainerFacade {
@@ -159,6 +169,11 @@ export class InversifyContainerFacade implements IInversifyContainerFacade {
             .inSingletonScope();
 
         this.container.bind<ILogger>(ServiceIdentifiers.ILogger).to(Logger).inSingletonScope();
+        this.container
+            .bind<IHtmlObfuscator>(ServiceIdentifiers.IHtmlObfuscator)
+            .to(HtmlObfuscator)
+            .inSingletonScope();
+
 
         this.container
             .bind<IJavaScriptObfuscator>(ServiceIdentifiers.IJavaScriptObfuscator)
@@ -173,6 +188,11 @@ export class InversifyContainerFacade implements IInversifyContainerFacade {
         this.container
             .bind<INodeTransformersRunner>(ServiceIdentifiers.INodeTransformersRunner)
             .to(NodeTransformersRunner)
+            .inSingletonScope();
+
+        this.container
+            .bind<IObfuscationWarningsStorage>(ServiceIdentifiers.IObfuscationWarningsStorage)
+            .to(ObfuscationWarningsStorage)
             .inSingletonScope();
 
         this.container.bind<IObfuscationResult>(ServiceIdentifiers.IObfuscationResult).to(ObfuscationResult);
@@ -212,6 +232,7 @@ export class InversifyContainerFacade implements IInversifyContainerFacade {
         this.container.loadSync(storagesModule);
         this.container.loadSync(stringArrayTransformersModule);
         this.container.loadSync(utilsModule);
+        this.container.loadSync(vmModule);
     }
 
     public unload(): void {

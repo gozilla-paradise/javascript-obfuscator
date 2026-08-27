@@ -9,6 +9,7 @@ import { CodeTransformer } from '../../../enums/code-transformers/CodeTransforme
 
 import { CodeTransformerNamesGroupsBuilder } from '../../../code-transformers/CodeTransformerNamesGroupsBuilder';
 import { HashbangOperatorTransformer } from '../../../code-transformers/preparing-transformers/HashbangOperatorTransformer';
+import { VMIntegrityCodeTransformer } from '../../../code-transformers/finalizing-transformers/VMIntegrityCodeTransformer';
 
 export const codeTransformersModule: ContainerModule = new ContainerModule((options: ContainerModuleLoadOptions) => {
     // code transformers factory
@@ -33,4 +34,10 @@ export const codeTransformersModule: ContainerModule = new ContainerModule((opti
         .bind<ICodeTransformer>(ServiceIdentifiers.ICodeTransformer)
         .to(HashbangOperatorTransformer)
         .whenNamed(CodeTransformer.HashbangOperatorTransformer);
+
+    // finalizing code transformers
+    options
+        .bind<ICodeTransformer>(ServiceIdentifiers.ICodeTransformer)
+        .to(VMIntegrityCodeTransformer)
+        .whenNamed(CodeTransformer.VMIntegrityCodeTransformer);
 });

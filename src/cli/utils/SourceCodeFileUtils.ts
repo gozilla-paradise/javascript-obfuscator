@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/member-ordering */
 import * as fs from 'fs';
 import * as path from 'path';
 import multimatch from 'multimatch';
@@ -85,9 +86,17 @@ export class SourceCodeFileUtils {
      * @param {string[]} excludePatterns
      * @returns {boolean}
      */
-    private static isValidFile(filePath: string, excludePatterns: string[] = []): boolean {
+    private isValidFile(filePath: string, excludePatterns: string[] = []): boolean {
+        const extension: string = path.extname(filePath).toLowerCase();
+        const availableExtensions: string[] = this.options.parseHtml
+            ? [
+                  ...JavaScriptObfuscatorCLI.availableInputExtensions,
+                  ...JavaScriptObfuscatorCLI.availableHtmlInputExtensions
+              ]
+            : JavaScriptObfuscatorCLI.availableInputExtensions;
+
         return (
-            JavaScriptObfuscatorCLI.availableInputExtensions.includes(path.extname(filePath)) &&
+            availableExtensions.includes(extension) &&
             !filePath.includes(JavaScriptObfuscatorCLI.obfuscatedFilePrefix) &&
             !SourceCodeFileUtils.isExcludedPath(filePath, excludePatterns)
         );
@@ -110,7 +119,7 @@ export class SourceCodeFileUtils {
     public readSourceCode(): IFileData[] {
         if (
             SourceCodeFileUtils.isFilePath(this.inputPath) &&
-            SourceCodeFileUtils.isValidFile(this.inputPath, this.options.exclude)
+            this.isValidFile(this.inputPath, this.options.exclude)
         ) {
             return [SourceCodeFileUtils.readFile(this.inputPath)];
         }
@@ -122,7 +131,13 @@ export class SourceCodeFileUtils {
             return this.readDirectoryRecursive(this.inputPath);
         }
 
-        const availableFilePaths: string = JavaScriptObfuscatorCLI.availableInputExtensions
+        const availableExtensions: string[] = this.options.parseHtml
+            ? [
+                  ...JavaScriptObfuscatorCLI.availableInputExtensions,
+                  ...JavaScriptObfuscatorCLI.availableHtmlInputExtensions
+              ]
+            : JavaScriptObfuscatorCLI.availableInputExtensions;
+        const availableFilePaths: string = availableExtensions
             .map((extension: string) => `\`${extension}\``)
             .join(', ');
 
@@ -149,7 +164,7 @@ export class SourceCodeFileUtils {
 
             if (
                 SourceCodeFileUtils.isFilePath(filePath) &&
-                SourceCodeFileUtils.isValidFile(filePath, this.options.exclude)
+                this.isValidFile(filePath, this.options.exclude)
             ) {
                 const fileData: IFileData = SourceCodeFileUtils.readFile(filePath);
 

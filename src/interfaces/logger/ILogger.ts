@@ -19,9 +19,4 @@ export interface ILogger {
      */
     warn(loggingMessage: LoggingMessage, value?: string | number): void;
 
-    /**
-     * @param {LoggingMessage} loggingMessage
-     * @param {string | number} value
-     */
-    advertise(loggingMessage: LoggingMessage): void;
 }

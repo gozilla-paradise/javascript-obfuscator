@@ -72,4 +72,22 @@ export class NodeMetadata {
             ) === true
         );
     }
+
+    public static isVMBytecodeLiteralNode(literalNode: ESTree.Literal): boolean {
+        return (
+            NodeMetadata.get<ESTree.LiteralNodeMetadata, 'vmBytecodeLiteral'>(
+                literalNode,
+                'vmBytecodeLiteral'
+            ) === true
+        );
+    }
+
+    public static isVMIntegritySentinelNode(literalNode: ESTree.Literal): boolean {
+        return (
+            NodeMetadata.get<ESTree.LiteralNodeMetadata, 'vmIntegritySentinel'>(
+                literalNode,
+                'vmIntegritySentinel'
+            ) === true
+        );
+    }
 }

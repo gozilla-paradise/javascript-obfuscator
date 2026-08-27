@@ -49,7 +49,10 @@ export class ObfuscatedCodeFileUtils {
 
         const isDirectoryRawInputPath: boolean = rawInputPathStats.isDirectory();
         const isDirectoryRawOutputPath: boolean =
-            !JavaScriptObfuscatorCLI.availableInputExtensions.includes(outputPathExtName);
+            ![
+                ...JavaScriptObfuscatorCLI.availableInputExtensions,
+                ...JavaScriptObfuscatorCLI.availableHtmlInputExtensions
+            ].includes(outputPathExtName.toLowerCase());
 
         if (isDirectoryRawInputPath) {
             if (isDirectoryRawOutputPath) {

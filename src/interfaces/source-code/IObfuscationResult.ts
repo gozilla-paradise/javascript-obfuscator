@@ -2,6 +2,8 @@ import { TIdentifierNamesCache } from '../../types/TIdentifierNamesCache';
 
 import { IInitializable } from '../IInitializable';
 import { IOptions } from '../options/IOptions';
+import { IObfuscationWarning } from './IObfuscationWarning';
+
 
 export interface IObfuscationResult extends IInitializable<[string, string]> {
     /**
@@ -23,4 +25,9 @@ export interface IObfuscationResult extends IInitializable<[string, string]> {
      * @return {string}
      */
     getSourceMap(): string;
+
+    /**
+     * @returns {readonly IObfuscationWarning[]}
+     */
+    getWarnings(): readonly IObfuscationWarning[];
 }

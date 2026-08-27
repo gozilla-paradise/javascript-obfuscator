@@ -16,6 +16,7 @@ import { AbstractNodeTransformer } from '../AbstractNodeTransformer';
 import { NodeFactory } from '../../node/NodeFactory';
 import { NodeGuards } from '../../node/NodeGuards';
 import { NodeLiteralUtils } from '../../node/NodeLiteralUtils';
+import { NodeMetadata } from '../../node/NodeMetadata';
 import { NodeUtils } from '../../node/NodeUtils';
 
 /**
@@ -133,6 +134,10 @@ export class SplitStringTransformer extends AbstractNodeTransformer {
      * @returns {Node}
      */
     private transformLiteralNodeByChunkLength(literalNode: ESTree.Literal, chunkLength: number): ESTree.Node {
+        if (NodeMetadata.isVMIntegritySentinelNode(literalNode)) {
+            return literalNode;
+        }
+
         if (!NodeLiteralUtils.isStringLiteralNode(literalNode)) {
             return literalNode;
         }

@@ -33,8 +33,6 @@ import './unit-tests/node/node-utils/NodeUtils.spec';
 import './unit-tests/node/numerical-expression-data-to-node-converter/NumericalExpressionDataToNodeConverter.spec';
 import './unit-tests/options/Options.spec';
 import './unit-tests/options/ValidationErrorsFormatter.spec';
-import './unit-tests/pro-api/ProApiClient.spec';
-import './functional-tests/pro-api/ProApiClient.spec';
 import './unit-tests/source-code/ObfuscationResult.spec';
 import './unit-tests/source-code/SourceCode.spec';
 import './unit-tests/storages/ArrayStorage.spec';
@@ -44,7 +42,6 @@ import './unit-tests/storages/identifier-names-cache/PropertyIdentifierNamesCach
 import './unit-tests/storages/string-array-transformers/literal-nodes-cache/LiteralNodesCacheStorage.spec';
 import './unit-tests/storages/string-array-transformers/string-array/StringArrayStorage.spec';
 import './unit-tests/storages/string-array-transformers/visited-lexical-scope-nodes-stack/VisitedLexicalScopeNodesStackStorage.spec';
-import './unit-tests/utils/AdvertisementUtils.spec';
 import './unit-tests/utils/ArrayUtils.spec';
 import './unit-tests/utils/CryptUtils.spec';
 import './unit-tests/utils/CryptUtilsStringArray.spec';
@@ -56,6 +53,9 @@ import './unit-tests/utils/RandomGenerator.spec';
 import './unit-tests/utils/SetUtils.spec';
 import './unit-tests/utils/StringUtils.spec';
 import './unit-tests/utils/Utils.spec';
+import './unit-tests/vm/VMSerializer.spec';
+import './unit-tests/vm/VMCrypto.spec';
+import './unit-tests/html/HtmlObfuscator.spec';
 
 /**
  * Functional tests
@@ -63,6 +63,11 @@ import './unit-tests/utils/Utils.spec';
 import './functional-tests/analyzers/calls-graph-analyzer/CallsGraphAnalyzer.spec';
 import './functional-tests/analyzers/scope-analyzer/ScopeAnalyzer.spec';
 import './functional-tests/cli/JavaScriptObfuscatorCLI.spec';
+import './functional-tests/html/HtmlObfuscation.spec';
+import './functional-tests/vm/VMObfuscation.spec';
+import './functional-tests/vm/VMSyntaxMatrix.spec';
+import './functional-tests/vm/VMDefenses.spec';
+import './functional-tests/package/LocalExports.spec';
 import './functional-tests/code-transformers/preparing-transformers/hashbang-operator-transformer/HashbangOperatorTransformer.spec';
 import './functional-tests/custom-code-helpers/common/templates/GlobalVariableNoEvalTemplate.spec';
 import './functional-tests/custom-code-helpers/console-output/ConsoleOutputDisableExpressionCodeHelper.spec';

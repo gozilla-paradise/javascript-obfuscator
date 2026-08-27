@@ -9,8 +9,6 @@ import { TOptionsPreset } from '../types/options/TOptionsPreset';
 import { IFileData } from '../interfaces/cli/IFileData';
 import { IInitializable } from '../interfaces/IInitializable';
 import { IObfuscationResult } from '../interfaces/source-code/IObfuscationResult';
-import { ProApiClient } from '../pro-api/ProApiClient';
-import { IProObfuscationResult } from '../interfaces/pro-api/IProApiClient';
 
 import { initializable } from '../decorators/Initializable';
 
@@ -27,6 +25,8 @@ import { StringArrayWrappersType } from '../enums/node-transformers/string-array
 
 import { ArraySanitizer } from './sanitizers/ArraySanitizer';
 import { BooleanSanitizer } from './sanitizers/BooleanSanitizer';
+import { BrowserEnvironmentSanitizer } from './sanitizers/BrowserEnvironmentSanitizer';
+
 
 import { Options } from '../options/Options';
 import { CLIUtils } from './utils/CLIUtils';
@@ -36,8 +36,8 @@ import { Logger } from '../logger/Logger';
 import { ObfuscatedCodeFileUtils } from './utils/ObfuscatedCodeFileUtils';
 import { SourceCodeFileUtils } from './utils/SourceCodeFileUtils';
 import { Utils } from '../utils/Utils';
-import { VMTargetFunctionsMode } from '../pro-api/enums/VMTargetFunctionsMode';
-import { VMBytecodeFormat } from '../pro-api/enums/VMBytecodeFormat';
+import { VMTargetFunctionsMode } from '../enums/vm/VMTargetFunctionsMode';
+import { VMBytecodeFormat } from '../enums/vm/VMBytecodeFormat';
 import { StrictModeSanitizer } from './sanitizers/StrictModeSanitizer';
 
 export class JavaScriptObfuscatorCLI implements IInitializable {
@@ -45,6 +45,8 @@ export class JavaScriptObfuscatorCLI implements IInitializable {
      * @type {string[]}
      */
     public static readonly availableInputExtensions: string[] = ['.js', '.mjs', '.cjs'];
+    public static readonly availableHtmlInputExtensions: string[] = ['.html', '.htm'];
+
 
     /**
      * @type {BufferEncoding}
@@ -412,7 +414,8 @@ export class JavaScriptObfuscatorCLI implements IInitializable {
             .option(
                 '--browser-environment <string>',
                 'Declares the transport scheme the production build is served over ' +
-                    '(only takes effect with `vmSelfDefending`). Values: http, https'
+                    '(only takes effect with `vmSelfDefending`). Values: http, https',
+                BrowserEnvironmentSanitizer
             )
             .option('--transform-object-keys <boolean>', 'Enables transformation of object keys', BooleanSanitizer)
             .option(
@@ -420,11 +423,6 @@ export class JavaScriptObfuscatorCLI implements IInitializable {
                 'Allows to enable/disable string conversion to unicode escape sequence',
                 BooleanSanitizer
             )
-            .option(
-                '--pro-api-token <string>',
-                'API token for Pro obfuscation via obfuscator.io (enables VM obfuscation via cloud API)'
-            )
-            .option('--pro-api-version <string>', 'Obfuscator version to use with Pro API (e.g., "5.0.0")')
             .option(
                 '--vm-obfuscation <boolean>',
                 'Enables VM-based bytecode obfuscation for functions',
@@ -672,13 +670,6 @@ export class JavaScriptObfuscatorCLI implements IInitializable {
             })
         };
 
-        const proApiToken = this.inputCLIOptions.proApiToken;
-
-        if (proApiToken && ProApiClient.hasProFeatures(options)) {
-            await this.processSourceCodeWithProApi(sourceCode, outputCodePath, options, proApiToken);
-
-            return;
-        }
 
         if (options.sourceMap) {
             this.processSourceCodeWithSourceMap(sourceCode, outputCodePath, options);
@@ -687,40 +678,6 @@ export class JavaScriptObfuscatorCLI implements IInitializable {
         }
     }
 
-    /**
-     * Process source code using Pro API (cloud-based VM obfuscation)
-     */
-    private async processSourceCodeWithProApi(
-        sourceCode: string,
-        outputCodePath: string,
-        options: TInputOptions,
-        apiToken: string
-    ): Promise<void> {
-        const proApiVersion = this.inputCLIOptions.proApiVersion;
-
-        const client = new ProApiClient({
-            apiToken,
-            version: proApiVersion
-        });
-
-        const result: IProObfuscationResult = await client.obfuscate(sourceCode, options, (message: string) => {
-            Logger.log(Logger.colorInfo, LoggingPrefix.CLI, message);
-        });
-
-        this.obfuscatedCodeFileUtils.writeFile(outputCodePath, result.getObfuscatedCode());
-
-        // Write source map if enabled and available
-        if (options.sourceMap && result.getSourceMap()) {
-            const outputSourceMapPath: string = this.obfuscatedCodeFileUtils.getOutputSourceMapPath(
-                outputCodePath,
-                options.sourceMapFileName ?? ''
-            );
-
-            if (options.sourceMapMode === SourceMapMode.Separate) {
-                this.obfuscatedCodeFileUtils.writeFile(outputSourceMapPath, result.getSourceMap());
-            }
-        }
-    }
 
     /**
      * @param {string} sourceCode

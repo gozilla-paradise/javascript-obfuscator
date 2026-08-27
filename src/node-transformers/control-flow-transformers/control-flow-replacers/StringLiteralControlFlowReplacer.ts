@@ -18,6 +18,7 @@ import { ControlFlowCustomNode } from '../../../enums/custom-nodes/ControlFlowCu
 import { AbstractControlFlowReplacer } from './AbstractControlFlowReplacer';
 import { NodeGuards } from '../../../node/NodeGuards';
 import { NodeLiteralUtils } from '../../../node/NodeLiteralUtils';
+import { NodeMetadata } from '../../../node/NodeMetadata';
 import { StringLiteralControlFlowStorageCallNode } from '../../../custom-nodes/control-flow-flattening-nodes/control-flow-storage-nodes/StringLiteralControlFlowStorageCallNode';
 import { LiteralNode } from '../../../custom-nodes/control-flow-flattening-nodes/LiteralNode';
 
@@ -57,6 +58,10 @@ export class StringLiteralControlFlowReplacer extends AbstractControlFlowReplace
         parentNode: ESTree.Node,
         controlFlowStorage: IControlFlowStorage
     ): ESTree.Node {
+        if (NodeMetadata.isVMIntegritySentinelNode(literalNode)) {
+            return literalNode;
+        }
+
         if (NodeGuards.isPropertyNode(parentNode) && parentNode.key === literalNode) {
             return literalNode;
         }

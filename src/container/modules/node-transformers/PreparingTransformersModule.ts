@@ -21,6 +21,8 @@ import { ObfuscatingGuardsTransformer } from '../../../node-transformers/prepari
 import { ParentificationTransformer } from '../../../node-transformers/preparing-transformers/ParentificationTransformer';
 import { ReservedStringObfuscatingGuard } from '../../../node-transformers/preparing-transformers/obfuscating-guards/ReservedStringObfuscatingGuard';
 import { VariablePreserveTransformer } from '../../../node-transformers/preparing-transformers/VariablePreserveTransformer';
+import { VMObfuscationTransformer } from '../../../node-transformers/preparing-transformers/VMObfuscationTransformer';
+
 
 export const preparingTransformersModule: ContainerModule = new ContainerModule(
     (options: ContainerModuleLoadOptions) => {
@@ -54,6 +56,11 @@ export const preparingTransformersModule: ContainerModule = new ContainerModule(
             .bind<INodeTransformer>(ServiceIdentifiers.INodeTransformer)
             .to(VariablePreserveTransformer)
             .whenNamed(NodeTransformer.VariablePreserveTransformer);
+        options
+            .bind<INodeTransformer>(ServiceIdentifiers.INodeTransformer)
+            .to(VMObfuscationTransformer)
+            .whenNamed(NodeTransformer.VMObfuscationTransformer);
+
 
         // obfuscating guards
         options

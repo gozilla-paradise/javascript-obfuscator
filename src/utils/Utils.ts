@@ -1,3 +1,5 @@
+import md5 from 'md5';
+
 export class Utils {
     /**
      * @type {string}
@@ -69,6 +71,27 @@ export class Utils {
 
         return `${baseIdentifiersPrefix}${sourceCodeIndex}`;
     }
+    public static buildRandomIdentifiersPrefix(
+        seed: string | number,
+        sourceCode: string,
+        identifiersPrefix: string
+    ): string {
+        const alphabet: string =
+            'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        const digest: string = md5(`${String(seed)}\0${sourceCode}`);
+        let suffix: string = '';
+
+        for (let index: number = 0; index < 6; index++) {
+            const byte: number = Number.parseInt(
+                digest.slice(index * 2, index * 2 + 2),
+                16
+            );
+            suffix += alphabet[byte % alphabet.length];
+        }
+
+        return identifiersPrefix + suffix;
+    }
+
 
     /**
      * @param {TObject} enumLikeObject

@@ -7,7 +7,7 @@ import { IOptions } from '../../interfaces/options/IOptions';
  * @returns {IOptions}
  */
 export const SelfDefendingRule: TOptionsNormalizerRule = (options: IOptions): IOptions => {
-    if (options.selfDefending) {
+    if (options.selfDefending === true) {
         options = {
             ...options,
             compact: true,

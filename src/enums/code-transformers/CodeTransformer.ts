@@ -1,3 +1,4 @@
 export enum CodeTransformer {
-    HashbangOperatorTransformer = 'HashbangOperatorTransformer'
+    HashbangOperatorTransformer = 'HashbangOperatorTransformer',
+    VMIntegrityCodeTransformer = 'VMIntegrityCodeTransformer'
 }

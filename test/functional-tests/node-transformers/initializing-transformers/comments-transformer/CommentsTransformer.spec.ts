@@ -175,4 +175,31 @@ describe('CommentsTransformer', () => {
             });
         });
     });
+
+    describe('Variant #8: userscript metadata block', () => {
+        it('should preserve the complete metadata header before generated code', () => {
+            const source: string = [
+                '// ==UserScript==',
+                '// @name Test userscript',
+                '// @match https://example.com/*',
+                '// ==/UserScript==',
+                '// ordinary comment',
+                'function test () { return 1; }'
+            ].join('\n');
+            const obfuscatedCode: string =
+                JavaScriptObfuscator.obfuscate(source, {
+                    ...NO_ADDITIONAL_NODES_PRESET
+                }).getObfuscatedCode();
+
+            assert.isTrue(obfuscatedCode.startsWith(
+                [
+                    '// ==UserScript==',
+                    '// @name Test userscript',
+                    '// @match https://example.com/*',
+                    '// ==/UserScript=='
+                ].join('\n')
+            ));
+            assert.notInclude(obfuscatedCode, 'ordinary comment');
+        });
+    });
 });

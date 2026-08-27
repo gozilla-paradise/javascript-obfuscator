@@ -363,7 +363,6 @@ describe('StringArrayStorageAnalyzer', () => {
                     stringArray: false,
                     stringArrayThreshold: 1
                 });
-                (<any>stringArrayStorageAnalyzer).options.stringArrayThreshold = 1;
 
                 const astTree: ESTree.Program = NodeFactory.programNode([
                     NodeFactory.expressionStatementNode(literalNode1),

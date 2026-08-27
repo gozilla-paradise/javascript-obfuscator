@@ -9,8 +9,14 @@ import { SourceMapSourcesMode } from '../../enums/source-map/SourceMapSourcesMod
 import { StringArrayIndexesType } from '../../enums/node-transformers/string-array-transformers/StringArrayIndexesType';
 import { StringArrayEncoding } from '../../enums/node-transformers/string-array-transformers/StringArrayEncoding';
 import { StringArrayWrappersType } from '../../enums/node-transformers/string-array-transformers/StringArrayWrappersType';
+import { VMBytecodeFormat } from '../../enums/vm/VMBytecodeFormat';
+import { VMDefenseReaction } from '../../enums/vm/VMDefenseReaction';
+import { VMTargetFunctionsMode } from '../../enums/vm/VMTargetFunctionsMode';
+
 
 export const DEFAULT_PRESET: TInputOptions = Object.freeze({
+    browserEnvironment: {},
+
     compact: true,
     config: '',
     controlFlowFlattening: false,
@@ -27,12 +33,16 @@ export const DEFAULT_PRESET: TInputOptions = Object.freeze({
     identifierNamesCache: null,
     identifierNamesGenerator: IdentifierNamesGenerator.HexadecimalIdentifierNamesGenerator,
     identifiersPrefix: '',
+    randomIdentifiersPrefix: false,
+
     identifiersDictionary: [],
     ignoreImports: false,
     inputFileName: '',
     log: false,
     numbersToExpressions: false,
     optionsPreset: OptionsPreset.Default,
+    parseHtml: false,
+
     renameGlobals: false,
     renameProperties: false,
     renamePropertiesMode: RenamePropertiesMode.Safe,
@@ -61,7 +71,53 @@ export const DEFAULT_PRESET: TInputOptions = Object.freeze({
     stringArrayWrappersParametersMaxCount: 2,
     stringArrayWrappersType: StringArrayWrappersType.Variable,
     stringArrayThreshold: 0.75,
+    strictMode: null,
+
     target: ObfuscationTarget.Browser,
     transformObjectKeys: false,
-    unicodeEscapeSequence: false
+    unicodeEscapeSequence: false,
+    vmAsyncExecutor: false,
+    vmBytecodeArrayEncoding: false,
+    vmBytecodeArrayEncodingKey: '',
+    vmBytecodeArrayEncodingKeyGetter: '',
+    vmBytecodeEncoding: false,
+    vmBytecodeFormat: VMBytecodeFormat.Binary,
+    vmCallContextOpcodes: false,
+    vmCompactDispatcher: false,
+    vmDeadCodeInjection: false,
+    vmDebugProtection: false,
+    vmDecoyOpcodes: false,
+    vmDefenseHook: null,
+    vmDefenseReaction: {
+        automation: VMDefenseReaction.Break,
+        debugger: VMDefenseReaction.Decoy,
+        sandbox: VMDefenseReaction.Decoy,
+        domain: VMDefenseReaction.Break,
+        tamper: VMDefenseReaction.Break,
+        integrity: VMDefenseReaction.Break
+    },
+    vmDomainLock: [],
+    vmDomainLockRedirectUrl: 'about:blank',
+    vmDynamicOpcodes: false,
+    vmExcludeFunctions: [],
+    vmForceCompileDynamicCode: false,
+    vmIndirectDispatch: false,
+    vmInstructionShuffle: false,
+    vmJumpsEncoding: false,
+    vmMacroOps: false,
+    vmObfuscation: false,
+    vmObfuscationThreshold: 1,
+    vmOpcodeShuffle: false,
+    vmPreprocessIdentifiers: false,
+    vmRandomizeKeys: false,
+    vmRegisterBased: false,
+    vmRuntimeOpcodeDerivation: false,
+    vmSelfDefending: false,
+    vmSplitDispatcher: false,
+    vmStackEncoding: false,
+    vmStatefulOpcodes: false,
+    vmStringArrayBytecodeOnly: false,
+    vmTargetFunctions: [],
+    vmTargetFunctionsMode: VMTargetFunctionsMode.Root,
+    vmWrapTopLevelInitializers: false
 });

@@ -11,7 +11,6 @@ import { ISourceMap } from '../../../src/interfaces/source-code/ISourceMap';
 import { StdoutWriteMock } from '../../mocks/StdoutWriteMock';
 
 import { JavaScriptObfuscatorCLI } from '../../../src/JavaScriptObfuscatorCLIFacade';
-import { ProApiClient } from '../../../src/pro-api/ProApiClient';
 import { parseSourceMapFromObfuscatedCode } from '../../helpers/parseSourceMapFromObfuscatedCode';
 
 describe('JavaScriptObfuscatorCLI', function (): void {
@@ -1356,162 +1355,6 @@ describe('JavaScriptObfuscatorCLI', function (): void {
             });
         });
 
-        describe('`--pro-api-token` option', () => {
-            let fetchStub: sinon.SinonStub;
-            let proApiFilePath: string;
-
-            before(async () => {
-                proApiFilePath = path.join(outputDirName, 'pro-api-test.js');
-                fs.writeFileSync(proApiFilePath, 'const test = 1;');
-            });
-
-            afterEach(() => {
-                if (fetchStub) {
-                    fetchStub.restore();
-                }
-            });
-
-            after(() => {
-                if (fs.existsSync(proApiFilePath)) {
-                    fs.unlinkSync(proApiFilePath);
-                }
-            });
-
-            describe('Variant #1: Pro API token with vmObfuscation', () => {
-                it('should use Pro API when --pro-api-token and --vm-obfuscation are provided', async () => {
-                    const mockResponse = {
-                        ok: true,
-                        status: 200,
-                        text: async () => JSON.stringify({ type: 'result', code: 'var obfuscated=1;', sourceMap: '' })
-                    } as Response;
-
-                    fetchStub = sinon.stub(global, 'fetch').resolves(mockResponse);
-
-                    await JavaScriptObfuscatorCLI.obfuscate([
-                        'node',
-                        'javascript-obfuscator',
-                        proApiFilePath,
-                        '--output',
-                        path.join(outputDirName, 'pro-api-output.js'),
-                        '--pro-api-token',
-                        'test-token-123',
-                        '--vm-obfuscation',
-                        'true'
-                    ]);
-
-                    // Wait for async operations
-                    await new Promise((resolve) => setTimeout(resolve, 100));
-
-                    assert.isTrue(fetchStub.called, 'fetch should be called for Pro API');
-                    const calledUrl = fetchStub.firstCall?.args[0];
-                    assert.include(calledUrl, 'obfuscator.io/api/v1');
-                });
-            });
-
-            describe('Variant #2: Pro API token with parseHtml', () => {
-                it('should use Pro API when --pro-api-token and --parse-html are provided', async () => {
-                    const mockResponse = {
-                        ok: true,
-                        status: 200,
-                        text: async () => JSON.stringify({ type: 'result', code: 'var obfuscated=1;', sourceMap: '' })
-                    } as Response;
-
-                    fetchStub = sinon.stub(global, 'fetch').resolves(mockResponse);
-
-                    await JavaScriptObfuscatorCLI.obfuscate([
-                        'node',
-                        'javascript-obfuscator',
-                        proApiFilePath,
-                        '--output',
-                        path.join(outputDirName, 'pro-api-output2.js'),
-                        '--pro-api-token',
-                        'test-token-123',
-                        '--parse-html',
-                        'true'
-                    ]);
-
-                    // Wait for async operations
-                    await new Promise((resolve) => setTimeout(resolve, 100));
-
-                    assert.isTrue(fetchStub.called, 'fetch should be called for Pro API');
-                });
-            });
-
-            describe('Variant #3: Pro API token with version', () => {
-                it('should pass version to Pro API URL when --pro-api-version is provided', async () => {
-                    const mockResponse = {
-                        ok: true,
-                        status: 200,
-                        text: async () => JSON.stringify({ type: 'result', code: 'var obfuscated=1;', sourceMap: '' })
-                    } as Response;
-
-                    fetchStub = sinon.stub(global, 'fetch').resolves(mockResponse);
-
-                    await JavaScriptObfuscatorCLI.obfuscate([
-                        'node',
-                        'javascript-obfuscator',
-                        proApiFilePath,
-                        '--output',
-                        path.join(outputDirName, 'pro-api-output3.js'),
-                        '--pro-api-token',
-                        'test-token-123',
-                        '--pro-api-version',
-                        '5.0.0-beta.20',
-                        '--vm-obfuscation',
-                        'true'
-                    ]);
-
-                    // Wait for async operations
-                    await new Promise((resolve) => setTimeout(resolve, 100));
-
-                    assert.isTrue(fetchStub.called, 'fetch should be called for Pro API');
-                    const calledUrl = fetchStub.firstCall?.args[0];
-                    assert.include(calledUrl, 'version=5.0.0-beta.20');
-                });
-            });
-
-            describe('Variant #4: Pro API token without Pro features falls back to local obfuscation', () => {
-                it('should obfuscate locally when --pro-api-token is provided but no Pro features enabled', async () => {
-                    const outputPath = path.join(outputDirName, 'local-output.js');
-
-                    fetchStub = sinon.stub(global, 'fetch');
-
-                    await JavaScriptObfuscatorCLI.obfuscate([
-                        'node',
-                        'javascript-obfuscator',
-                        proApiFilePath,
-                        '--output',
-                        outputPath,
-                        '--pro-api-token',
-                        'test-token-123',
-                        '--compact',
-                        'true'
-                    ]);
-
-                    assert.isFalse(fetchStub.called, 'Pro API should not be called without Pro features');
-                    assert.isTrue(fs.existsSync(outputPath), 'output file should be written locally');
-                    assert.isNotEmpty(fs.readFileSync(outputPath, 'utf8'));
-
-                    if (fs.existsSync(outputPath)) {
-                        fs.unlinkSync(outputPath);
-                    }
-                });
-            });
-        });
-
-        describe('hasProFeatures static method', () => {
-            it('should return true for vmObfuscation', () => {
-                assert.isTrue(ProApiClient.hasProFeatures({ vmObfuscation: true }));
-            });
-
-            it('should return true for parseHtml', () => {
-                assert.isTrue(ProApiClient.hasProFeatures({ parseHtml: true }));
-            });
-
-            it('should return false for no Pro features', () => {
-                assert.isFalse(ProApiClient.hasProFeatures({ compact: true }));
-            });
-        });
 
         /**
          * https://github.com/javascript-obfuscator/javascript-obfuscator/issues/1236
@@ -1555,6 +1398,105 @@ describe('JavaScriptObfuscatorCLI', function (): void {
 
             after(() => {
                 fs.unlinkSync(outputFilePath);
+            });
+        });
+
+        describe('local VM and HTML options', () => {
+            const vmInputPath: string = path.join(outputDirName, 'vm-input.js');
+            const vmOutputPath: string = path.join(
+                outputDirName,
+                'vm-output.js'
+            );
+            const htmlInputPath: string = path.join(
+                outputDirName,
+                'page-input.html'
+            );
+            const htmlOutputPath: string = path.join(
+                outputDirName,
+                'page-output.html'
+            );
+
+            before(() => {
+                fs.writeFileSync(
+                    vmInputPath,
+                    'function price(q,p){return q*p}globalThis.__cliAnswer=price(6,7)'
+                );
+                fs.writeFileSync(
+                    htmlInputPath,
+                    '<!--before--><script>skip()</script><script data-javascript-obfuscator>function price(q,p){return q*p}globalThis.__htmlAnswer=price(6,7)</script><!--after-->'
+                );
+            });
+
+            it('should execute tokenless VM output with local protection flags', async () => {
+                await JavaScriptObfuscatorCLI.obfuscate([
+                    'node',
+                    'javascript-obfuscator',
+                    vmInputPath,
+                    '--output',
+                    vmOutputPath,
+                    '--vm-obfuscation',
+                    'true',
+                    '--vm-target-functions',
+                    'price',
+                    '--vm-bytecode-format',
+                    'json',
+                    '--vm-bytecode-encoding',
+                    'true',
+                    '--vm-instruction-shuffle',
+                    'true',
+                    '--seed',
+                    '19',
+                    '--compact',
+                    'true',
+                    '--string-array',
+                    'false'
+                ]);
+                const output: string = fs.readFileSync(vmOutputPath, 'utf8');
+                const globals = globalThis as unknown as {
+                    __cliAnswer?: number;
+                };
+
+                Function(output)();
+                assert.equal(globals.__cliAnswer, 42);
+                assert.notInclude(output, 'return q*p');
+                delete globals.__cliAnswer;
+            });
+
+            it('should preserve HTML bytes outside eligible script bodies', async () => {
+                await JavaScriptObfuscatorCLI.obfuscate([
+                    'node',
+                    'javascript-obfuscator',
+                    htmlInputPath,
+                    '--output',
+                    htmlOutputPath,
+                    '--parse-html',
+                    'true',
+                    '--vm-obfuscation',
+                    'true',
+                    '--vm-target-functions',
+                    'price',
+                    '--seed',
+                    '20',
+                    '--compact',
+                    'true',
+                    '--string-array',
+                    'false'
+                ]);
+                const output: string = fs.readFileSync(htmlOutputPath, 'utf8');
+
+                assert.include(
+                    output,
+                    '<!--before--><script>skip()</script><script data-javascript-obfuscator>'
+                );
+                assert.include(output, '</script><!--after-->');
+                assert.notInclude(output, 'return q*p');
+                assert.isFalse(fs.existsSync(`${htmlOutputPath}.map`));
+            });
+
+            after(() => {
+                [vmInputPath, vmOutputPath, htmlInputPath, htmlOutputPath]
+                    .filter((filePath: string) => fs.existsSync(filePath))
+                    .forEach((filePath: string) => fs.unlinkSync(filePath));
             });
         });
 

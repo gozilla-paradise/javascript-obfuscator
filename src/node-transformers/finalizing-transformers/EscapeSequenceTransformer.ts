@@ -14,6 +14,7 @@ import { NodeTransformer } from '../../enums/node-transformers/NodeTransformer';
 import { AbstractNodeTransformer } from '../AbstractNodeTransformer';
 import { NodeGuards } from '../../node/NodeGuards';
 import { NodeLiteralUtils } from '../../node/NodeLiteralUtils';
+import { NodeMetadata } from '../../node/NodeMetadata';
 import { NodeFactory } from '../../node/NodeFactory';
 import { NodeUtils } from '../../node/NodeUtils';
 
@@ -71,6 +72,10 @@ export class EscapeSequenceTransformer extends AbstractNodeTransformer {
      * @returns {Literal}
      */
     public transformNode(literalNode: ESTree.Literal, parentNode: ESTree.Node | null): ESTree.Literal {
+        if (NodeMetadata.isVMIntegritySentinelNode(literalNode)) {
+            return literalNode;
+        }
+
         if (!NodeLiteralUtils.isStringLiteralNode(literalNode)) {
             return literalNode;
         }

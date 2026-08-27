@@ -6,6 +6,9 @@ import { TIdentifierNamesCache } from '../types/TIdentifierNamesCache';
 import { ICryptUtils } from '../interfaces/utils/ICryptUtils';
 import { IGlobalIdentifierNamesCacheStorage } from '../interfaces/storages/identifier-names-cache/IGlobalIdentifierNamesCacheStorage';
 import { IObfuscationResult } from '../interfaces/source-code/IObfuscationResult';
+import { IObfuscationWarning } from '../interfaces/source-code/IObfuscationWarning';
+import { IObfuscationWarningsStorage } from '../interfaces/storages/IObfuscationWarningsStorage';
+
 import { IPropertyIdentifierNamesCacheStorage } from '../interfaces/storages/identifier-names-cache/IPropertyIdentifierNamesCacheStorage';
 import { IOptions } from '../interfaces/options/IOptions';
 
@@ -45,6 +48,11 @@ export class ObfuscationResult implements IObfuscationResult {
      * @type {IOptions}
      */
     private readonly options: IOptions;
+    /**
+     * @type {IObfuscationWarningsStorage}
+     */
+    private readonly warningsStorage: IObfuscationWarningsStorage;
+
 
     /**
      * @param {ICryptUtils} cryptUtils
@@ -58,12 +66,16 @@ export class ObfuscationResult implements IObfuscationResult {
         globalIdentifierNamesCacheStorage: IGlobalIdentifierNamesCacheStorage,
         @inject(ServiceIdentifiers.IPropertyIdentifierNamesCacheStorage)
         propertyIdentifierNamesCacheStorage: IPropertyIdentifierNamesCacheStorage,
-        @inject(ServiceIdentifiers.IOptions) options: IOptions
+        @inject(ServiceIdentifiers.IOptions) options: IOptions,
+        @inject(ServiceIdentifiers.IObfuscationWarningsStorage)
+        warningsStorage: IObfuscationWarningsStorage
     ) {
         this.cryptUtils = cryptUtils;
         this.globalIdentifierNamesCacheStorage = globalIdentifierNamesCacheStorage;
         this.propertyIdentifierNamesCacheStorage = propertyIdentifierNamesCacheStorage;
         this.options = options;
+        this.warningsStorage = warningsStorage;
+
     }
 
     /**
@@ -108,6 +120,13 @@ export class ObfuscationResult implements IObfuscationResult {
      */
     public getSourceMap(): string {
         return this.sourceMap;
+    }
+
+    /**
+     * @returns {readonly IObfuscationWarning[]}
+     */
+    public getWarnings(): readonly IObfuscationWarning[] {
+        return this.warningsStorage.getWarnings();
     }
 
     /**

@@ -11,10 +11,17 @@ declare module 'estree' {
     export interface BaseNodeMetadata {
         forceTransformNode?: boolean;
         ignoredNode?: boolean;
+        vmCallContextToken?: number;
+        vmCallContextFunctionId?: number;
     }
 
     export interface FunctionExpressionNodeMetadata extends BaseNodeMetadata {
         evalHostNode?: boolean;
+    }
+
+    export interface CallExpressionNodeMetadata extends BaseNodeMetadata {
+        vmCallContextFunctionId?: number;
+        vmCallContextToken?: number;
     }
 
     export interface IdentifierNodeMetadata extends BaseNodeMetadata {
@@ -24,6 +31,8 @@ declare module 'estree' {
     export interface LiteralNodeMetadata extends BaseNodeMetadata {
         stringArrayCallLiteralNode?: boolean;
         propertyKeyToRenameNode?: boolean;
+        vmBytecodeLiteral?: boolean;
+        vmIntegritySentinel?: boolean;
     }
 
     /**
@@ -43,6 +52,10 @@ declare module 'estree' {
         end: number;
         loc?: acorn.SourceLocation;
     }
+    interface CallExpression extends BaseNode {
+        metadata?: CallExpressionNodeMetadata;
+    }
+
 
     interface FunctionExpression extends BaseFunction, BaseExpression {
         metadata?: FunctionExpressionNodeMetadata;

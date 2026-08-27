@@ -34,5 +34,6 @@ export enum NodeTransformer {
     StringArrayScopeCallsWrapperTransformer = 'StringArrayScopeCallsWrapperTransformer',
     TemplateLiteralTransformer = 'TemplateLiteralTransformer',
     VariableDeclarationsMergeTransformer = 'VariableDeclarationsMergeTransformer',
-    VariablePreserveTransformer = 'VariablePreserveTransformer'
+    VariablePreserveTransformer = 'VariablePreserveTransformer',
+    VMObfuscationTransformer = 'VMObfuscationTransformer'
 }

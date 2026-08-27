@@ -139,6 +139,17 @@ export class StringArrayStorageAnalyzer implements IStringArrayStorageAnalyzer {
      * @returns {boolean}
      */
     private shouldAddValueToStringArray(literalNode: TStringLiteralNode): boolean {
+        if (NodeMetadata.isVMIntegritySentinelNode(literalNode)) {
+            return false;
+        }
+
+        if (
+            this.options.vmStringArrayBytecodeOnly &&
+            !NodeMetadata.isVMBytecodeLiteralNode(literalNode)
+        ) {
+            return false;
+        }
+
         // `base64` and `rc4` encodings rely on `encodeURIComponent`/`decodeURIComponent`, which cannot
         // represent lone (unpaired) surrogate code units. Keeping such values inline avoids a
         // `URIError: URI malformed` crash while still producing valid obfuscated code.
