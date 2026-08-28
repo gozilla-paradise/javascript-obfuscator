@@ -1,0 +1,504 @@
+:root {
+    color-scheme: dark;
+    --background: #16191d;
+    --surface: #20242a;
+    --surface-raised: #282d34;
+    --border: #3a424c;
+    --text: #eef3f7;
+    --muted: #a8b1ba;
+    --accent: #27c4d8;
+    --accent-strong: #54dbea;
+    --danger: #ff8c8c;
+    --focus: #7cebf5;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--background);
+    color: var(--text);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    min-width: 320px;
+    min-height: 100vh;
+    margin: 0;
+    background: var(--background);
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
+button,
+input[type="file"],
+select,
+input[type="text"],
+input[type="number"] {
+    min-height: 44px;
+}
+
+button,
+input,
+select,
+textarea {
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: #171a1e;
+    color: var(--text);
+}
+
+button {
+    padding: 0.65rem 1rem;
+    cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: #242c31;
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+    cursor: not-allowed;
+    opacity: 0.52;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+}
+
+input[type="text"],
+input[type="number"],
+select,
+textarea {
+    width: 100%;
+    padding: 0.7rem 0.75rem;
+}
+
+textarea {
+    resize: vertical;
+}
+
+label,
+legend {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 0.9rem;
+    font-weight: 650;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+    margin-top: 0;
+}
+
+h1 {
+    display: inline;
+    margin-right: 0.75rem;
+    font-size: clamp(1.4rem, 3vw, 2rem);
+}
+
+h2 {
+    margin-bottom: 1rem;
+    font-size: 1.15rem;
+}
+
+h3,
+h4 {
+    font-size: 1rem;
+}
+
+.site-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.15rem clamp(1rem, 3vw, 2rem);
+    border-bottom: 1px solid var(--border);
+    background: #111418;
+}
+
+.site-header p {
+    margin: 0;
+    color: var(--accent-strong);
+    font-weight: 650;
+}
+
+.version {
+    color: var(--muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.app-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 420px;
+    gap: 1rem;
+    width: min(1800px, 100%);
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+.workspace {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    align-items: start;
+}
+
+.panel {
+    min-width: 0;
+    padding: 1.15rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: 0 10px 28px rgb(0 0 0 / 18%);
+}
+
+.options-panel {
+    max-height: calc(100vh - 98px);
+    overflow: auto;
+    position: sticky;
+    top: 1rem;
+}
+
+.tabs {
+    display: flex;
+    gap: 0.35rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.tabs button {
+    border: 0;
+    border-bottom: 3px solid transparent;
+    border-radius: 6px 6px 0 0;
+    background: transparent;
+}
+
+.tabs button[aria-selected="true"] {
+    border-bottom-color: var(--accent);
+    color: var(--accent-strong);
+}
+
+[role="tabpanel"] > label,
+[role="tabpanel"] > div > label {
+    margin-top: 0.9rem;
+}
+
+.code-input {
+    min-height: 430px;
+}
+
+.code-input,
+.json-input,
+.code-preview,
+code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+.project-pickers {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.project-pickers input {
+    width: 100%;
+    padding: 0.45rem;
+}
+
+.file-manifest {
+    max-height: 180px;
+    margin: 0.6rem 0 1rem;
+    padding: 0.7rem 0.7rem 0.7rem 1.8rem;
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--muted);
+    background: #171a1e;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.82rem;
+}
+
+.file-manifest:empty {
+    display: none;
+}
+
+.inline-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem;
+    margin: 1rem 0;
+    padding: 0;
+    border: 0;
+}
+
+.inline-options legend {
+    width: 100%;
+    margin: 0;
+}
+
+.inline-options label,
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 36px;
+    margin: 0;
+    font-weight: 500;
+}
+
+.message {
+    min-height: 1.4rem;
+    margin-top: 0.75rem;
+}
+
+.error {
+    color: var(--danger);
+}
+
+.muted {
+    color: var(--muted);
+}
+
+.job-actions,
+.result-actions,
+.artifact-downloads {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.job-actions {
+    margin-top: 0.6rem;
+}
+
+.primary {
+    border-color: #1eafc1;
+    background: #13899a;
+    color: #fff;
+    font-weight: 750;
+}
+
+.progress {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.panel-heading {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.code-preview {
+    min-height: 430px;
+    max-height: 68vh;
+    margin: 1rem 0;
+    padding: 1rem;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: #111418;
+    color: #dce9ee;
+    font-size: 0.86rem;
+    line-height: 1.5;
+}
+
+.artifact-downloads button {
+    min-height: 38px;
+    padding: 0.45rem 0.7rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.78rem;
+}
+
+#warnings-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+#warnings h4 {
+    margin-bottom: 0.35rem;
+    color: var(--accent-strong);
+}
+
+#warnings ul {
+    margin-top: 0;
+    padding-left: 1.4rem;
+}
+
+.options-panel fieldset {
+    margin: 0 0 1rem;
+    padding: 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.options-panel legend {
+    padding: 0 0.4rem;
+    color: var(--accent-strong);
+}
+
+.vm-profile-action {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: #171a1e;
+}
+
+.vm-profile-action button {
+    width: 100%;
+    border-color: var(--accent);
+}
+
+.vm-profile-action p {
+    margin: 0.6rem 0 0;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.option-field {
+    margin-bottom: 0.85rem;
+}
+
+.option-field:last-child {
+    margin-bottom: 0;
+}
+
+.switch-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.switch-field label {
+    margin: 0;
+}
+
+.switch {
+    width: 48px;
+    height: 26px;
+    margin: 0;
+    appearance: none;
+    border-radius: 999px;
+    background: #4a515a;
+    cursor: pointer;
+    transition: background 120ms ease;
+}
+
+.switch::before {
+    display: block;
+    width: 20px;
+    height: 20px;
+    margin: 2px;
+    border-radius: 50%;
+    background: #fff;
+    content: "";
+    transition: transform 120ms ease;
+}
+
+.switch:checked {
+    border-color: var(--accent);
+    background: #13899a;
+}
+
+.switch:checked::before {
+    transform: translateX(21px);
+}
+
+.checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.checkbox-group input,
+.inline-options input {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--accent);
+}
+
+.advanced-options {
+    padding-top: 0.3rem;
+}
+
+.advanced-options summary {
+    min-height: 44px;
+    padding: 0.65rem 0;
+    cursor: pointer;
+    color: var(--accent-strong);
+    font-weight: 700;
+}
+
+.json-input {
+    min-height: 320px;
+    font-size: 0.8rem;
+    line-height: 1.45;
+}
+
+@media (max-width: 1250px) {
+    .workspace {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 899px) {
+    .site-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .app-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .options-panel {
+        max-height: none;
+        position: static;
+    }
+}
+
+@media (max-width: 560px) {
+    .app-shell {
+        padding: 0.6rem;
+    }
+
+    .panel {
+        padding: 0.85rem;
+    }
+
+    .project-pickers,
+    .panel-heading {
+        grid-template-columns: 1fr;
+    }
+
+    .panel-heading {
+        display: block;
+    }
+
+    .result-actions {
+        margin-bottom: 0.75rem;
+    }
+}

@@ -56,6 +56,8 @@ import './unit-tests/utils/Utils.spec';
 import './unit-tests/vm/VMSerializer.spec';
 import './unit-tests/vm/VMCrypto.spec';
 import './unit-tests/html/HtmlObfuscator.spec';
+import './unit-tests/web/OptionsState.spec';
+import './unit-tests/web/ProjectFiles.spec';
 
 /**
  * Functional tests

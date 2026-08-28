@@ -1,0 +1,11 @@
+.git
+.github
+.husky
+.omp
+node_modules
+dist
+coverage
+.nyc_output
+test
+*.log
+.DS_Store

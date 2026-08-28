@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>JavaScript Obfuscator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="site-header">
+        <div>
+            <h1>JavaScript Obfuscator</h1>
+            <span id="version" class="version"></span>
+        </div>
+        <p>Runs locally in your browser</p>
+    </header>
+
+    <main class="app-shell">
+        <div class="workspace">
+            <section class="panel source-panel" aria-labelledby="source-heading">
+                <h2 id="source-heading">Source</h2>
+                <div class="tabs" role="tablist" aria-label="Input type">
+                    <button id="paste-tab" type="button" role="tab" aria-selected="true" aria-controls="paste-panel" data-mode="paste">Paste</button>
+                    <button id="file-tab" type="button" role="tab" aria-selected="false" aria-controls="file-panel" data-mode="file">One file</button>
+                    <button id="project-tab" type="button" role="tab" aria-selected="false" aria-controls="project-panel" data-mode="project">Project</button>
+                </div>
+
+                <div id="paste-panel" role="tabpanel" aria-labelledby="paste-tab" data-mode-panel="paste">
+                    <label for="paste-name">Filename</label>
+                    <input id="paste-name" type="text" value="snippet.js" autocomplete="off">
+                    <label for="paste-source">JavaScript</label>
+                    <textarea id="paste-source" class="code-input" spellcheck="false" placeholder="Paste JavaScript here"></textarea>
+                </div>
+
+                <div id="file-panel" role="tabpanel" aria-labelledby="file-tab" data-mode-panel="file" hidden>
+                    <label for="single-file">JavaScript file</label>
+                    <input id="single-file" type="file" accept=".js,.mjs,.cjs">
+                    <p id="single-file-meta" class="muted">No file selected.</p>
+                </div>
+
+                <div id="project-panel" role="tabpanel" aria-labelledby="project-tab" data-mode-panel="project" hidden>
+                    <div class="project-pickers">
+                        <div>
+                            <label for="project-files">Choose files</label>
+                            <input id="project-files" type="file" accept=".js,.mjs,.cjs,.json" multiple>
+                        </div>
+                        <div>
+                            <label for="project-folder">Choose folder</label>
+                            <input id="project-folder" type="file" accept=".js,.mjs,.cjs,.json" multiple webkitdirectory>
+                        </div>
+                    </div>
+                    <p id="project-summary" class="muted">No project selected.</p>
+                    <ul id="project-manifest" class="file-manifest" aria-label="Uploaded project files"></ul>
+                    <label for="project-entry">Entry point</label>
+                    <select id="project-entry" disabled></select>
+                    <fieldset class="inline-options">
+                        <legend>Output</legend>
+                        <label><input type="radio" name="project-output" value="bundle" checked> Single bundle</label>
+                        <label><input type="radio" name="project-output" value="modules"> Preserve modules</label>
+                    </fieldset>
+                    <div id="bundle-format-field">
+                        <label for="bundle-format">Bundle format</label>
+                        <select id="bundle-format">
+                            <option value="esm">esm</option>
+                            <option value="iife">iife</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="error-region" class="message error" role="alert" aria-live="assertive"></div>
+                <div class="job-actions">
+                    <button id="obfuscate" type="button" class="primary" disabled>Obfuscate</button>
+                    <button id="cancel" type="button" disabled>Cancel</button>
+                    <span id="progress" class="progress" role="status" aria-live="polite">Loading options…</span>
+                </div>
+            </section>
+
+            <section class="panel result-panel" aria-labelledby="result-heading">
+                <div class="panel-heading">
+                    <h2 id="result-heading">Result</h2>
+                    <div id="result-actions" class="result-actions" hidden>
+                        <button id="copy-result" type="button">Copy</button>
+                        <button id="download-result" type="button">Download</button>
+                        <button id="download-all" type="button" hidden>Download all</button>
+                    </div>
+                </div>
+                <p id="result-meta" class="muted">Obfuscated output will appear here.</p>
+                <p id="project-counts" class="muted" hidden></p>
+                <pre class="code-preview"><code id="result-preview"></code></pre>
+                <div id="artifact-downloads" class="artifact-downloads" aria-label="Output artifacts"></div>
+                <section id="warnings-section" hidden>
+                    <h3>Warnings</h3>
+                    <div id="warnings"></div>
+                </section>
+            </section>
+        </div>
+
+        <aside class="panel options-panel" aria-labelledby="options-heading">
+            <h2 id="options-heading">Options</h2>
+            <div id="option-controls"></div>
+            <details class="advanced-options">
+                <summary>Advanced JSON</summary>
+                <p class="muted">Every serializable option is editable here. Structured <code>browserEnvironment</code>, <code>identifierNamesCache</code>, <code>vmDefenseHook</code>, and <code>vmDefenseReaction</code> are advanced-only. <code>inputFileName</code> and <code>sourceMapFileName</code> are managed per job.</p>
+                <label for="options-json">Options JSON</label>
+                <textarea id="options-json" class="json-input" spellcheck="false" disabled></textarea>
+                <div id="options-error" class="message error" role="alert" aria-live="assertive"></div>
+                <button id="apply-options" type="button" disabled>Apply JSON</button>
+            </details>
+        </aside>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
