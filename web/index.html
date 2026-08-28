@@ -4,111 +4,195 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="dark">
-    <title>JavaScript Obfuscator</title>
+    <meta name="theme-color" content="#05070d">
+    <title>JavaScript Obfuscator — Local Protection Studio</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <div class="ambient-stage" aria-hidden="true">
+        <div class="ambient-grid"></div>
+        <div class="ambient-glow ambient-glow-cyan"></div>
+        <div class="ambient-glow ambient-glow-violet"></div>
+        <svg class="wave-field" viewBox="0 0 1600 360" preserveAspectRatio="none">
+            <g class="wave-track wave-track-back">
+                <path class="wave-line" d="M-160 218 C 40 90, 240 338, 440 210 S 840 80, 1040 218 S 1440 338, 1640 196 S 2040 92, 2240 214" />
+                <path class="wave-line" d="M-160 246 C 70 136, 270 326, 470 230 S 860 112, 1070 240 S 1460 316, 1650 218 S 2020 130, 2240 236" />
+            </g>
+            <g class="wave-track wave-track-front">
+                <path class="wave-line" d="M-160 260 C 10 132, 220 354, 430 236 S 820 118, 1030 258 S 1420 350, 1630 228 S 2020 128, 2240 254" />
+            </g>
+        </svg>
+    </div>
+
     <header class="site-header">
-        <div>
-            <h1>JavaScript Obfuscator</h1>
-            <span id="version" class="version"></span>
+        <div class="header-inner">
+            <div class="brand-lockup">
+                <div class="brand-mark" aria-hidden="true">
+                    <svg viewBox="0 0 52 52">
+                        <path class="brand-hex" d="M26 2 46.8 14v24L26 50 5.2 38V14Z" />
+                        <path class="brand-bracket" d="m20 17-7 9 7 9M32 17l7 9-7 9" />
+                        <circle class="brand-core" cx="26" cy="26" r="3.5" />
+                    </svg>
+                </div>
+                <div>
+                    <div class="brand-kicker">Protection Studio <span id="version" class="version"></span></div>
+                    <h1>JavaScript <span>Obfuscator</span></h1>
+                </div>
+            </div>
+            <div class="header-assurance">
+                <span class="live-indicator" aria-hidden="true"><i></i></span>
+                <div>
+                    <strong>Local runtime online</strong>
+                    <span>Your source never leaves this device</span>
+                </div>
+            </div>
         </div>
-        <p>Runs locally in your browser</p>
     </header>
 
     <main class="app-shell">
-        <div class="workspace">
-            <section class="panel source-panel" aria-labelledby="source-heading">
-                <h2 id="source-heading">Source</h2>
-                <div class="tabs" role="tablist" aria-label="Input type">
-                    <button id="paste-tab" type="button" role="tab" aria-selected="true" aria-controls="paste-panel" data-mode="paste">Paste</button>
-                    <button id="file-tab" type="button" role="tab" aria-selected="false" aria-controls="file-panel" data-mode="file">One file</button>
-                    <button id="project-tab" type="button" role="tab" aria-selected="false" aria-controls="project-panel" data-mode="project">Project</button>
-                </div>
+        <section class="system-strip" aria-label="Runtime guarantees">
+            <div class="system-stat">
+                <span class="stat-icon" aria-hidden="true">01</span>
+                <div><strong>Browser native</strong><span>Runs entirely on-device</span></div>
+            </div>
+            <div class="system-stat">
+                <span class="stat-icon" aria-hidden="true">02</span>
+                <div><strong>Worker isolated</strong><span>Responsive during processing</span></div>
+            </div>
+            <div class="system-stat">
+                <span class="stat-icon" aria-hidden="true">03</span>
+                <div><strong>Export ready</strong><span>Files, projects and bundles</span></div>
+            </div>
+            <div class="system-signal" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+        </section>
 
-                <div id="paste-panel" role="tabpanel" aria-labelledby="paste-tab" data-mode-panel="paste">
-                    <label for="paste-name">Filename</label>
-                    <input id="paste-name" type="text" value="snippet.js" autocomplete="off">
-                    <label for="paste-source">JavaScript</label>
-                    <textarea id="paste-source" class="code-input" spellcheck="false" placeholder="Paste JavaScript here"></textarea>
-                </div>
-
-                <div id="file-panel" role="tabpanel" aria-labelledby="file-tab" data-mode-panel="file" hidden>
-                    <label for="single-file">JavaScript file</label>
-                    <input id="single-file" type="file" accept=".js,.mjs,.cjs">
-                    <p id="single-file-meta" class="muted">No file selected.</p>
-                </div>
-
-                <div id="project-panel" role="tabpanel" aria-labelledby="project-tab" data-mode-panel="project" hidden>
-                    <div class="project-pickers">
+        <div class="command-layout">
+            <div class="workspace">
+                <section class="panel source-panel" aria-labelledby="source-heading">
+                    <div class="panel-topline"><span>Input channel</span><span class="panel-index">01</span></div>
+                    <div class="panel-title-row">
                         <div>
-                            <label for="project-files">Choose files</label>
-                            <input id="project-files" type="file" accept=".js,.mjs,.cjs,.json" multiple>
+                            <p class="eyebrow">Source intake</p>
+                            <h2 id="source-heading">Load your code</h2>
                         </div>
-                        <div>
-                            <label for="project-folder">Choose folder</label>
-                            <input id="project-folder" type="file" accept=".js,.mjs,.cjs,.json" multiple webkitdirectory>
+                        <span class="status-chip"><i></i> Ready</span>
+                    </div>
+
+                    <div class="tabs" role="tablist" aria-label="Input type">
+                        <button id="paste-tab" type="button" role="tab" aria-selected="true" aria-controls="paste-panel" data-mode="paste">Paste code</button>
+                        <button id="file-tab" type="button" role="tab" aria-selected="false" aria-controls="file-panel" data-mode="file">One file</button>
+                        <button id="project-tab" type="button" role="tab" aria-selected="false" aria-controls="project-panel" data-mode="project">Project</button>
+                    </div>
+
+                    <div id="paste-panel" role="tabpanel" aria-labelledby="paste-tab" data-mode-panel="paste">
+                        <label for="paste-name">Filename</label>
+                        <input id="paste-name" type="text" value="snippet.js" autocomplete="off">
+                        <label for="paste-source">JavaScript source</label>
+                        <div class="editor-shell">
+                            <div class="editor-bar" aria-hidden="true"><span></span><span></span><span></span><b>JAVASCRIPT</b></div>
+                            <textarea id="paste-source" class="code-input" spellcheck="false" placeholder="// Paste the code you want to protect…"></textarea>
                         </div>
                     </div>
-                    <p id="project-summary" class="muted">No project selected.</p>
-                    <ul id="project-manifest" class="file-manifest" aria-label="Uploaded project files"></ul>
-                    <label for="project-entry">Entry point</label>
-                    <select id="project-entry" disabled></select>
-                    <fieldset class="inline-options">
-                        <legend>Output</legend>
-                        <label><input type="radio" name="project-output" value="bundle" checked> Single bundle</label>
-                        <label><input type="radio" name="project-output" value="modules"> Preserve modules</label>
-                    </fieldset>
-                    <div id="bundle-format-field">
-                        <label for="bundle-format">Bundle format</label>
-                        <select id="bundle-format">
-                            <option value="esm">esm</option>
-                            <option value="iife">iife</option>
-                        </select>
-                    </div>
-                </div>
 
-                <div id="error-region" class="message error" role="alert" aria-live="assertive"></div>
-                <div class="job-actions">
-                    <button id="obfuscate" type="button" class="primary" disabled>Obfuscate</button>
-                    <button id="cancel" type="button" disabled>Cancel</button>
-                    <span id="progress" class="progress" role="status" aria-live="polite">Loading options…</span>
-                </div>
-            </section>
-
-            <section class="panel result-panel" aria-labelledby="result-heading">
-                <div class="panel-heading">
-                    <h2 id="result-heading">Result</h2>
-                    <div id="result-actions" class="result-actions" hidden>
-                        <button id="copy-result" type="button">Copy</button>
-                        <button id="download-result" type="button">Download</button>
-                        <button id="download-all" type="button" hidden>Download all</button>
+                    <div id="file-panel" role="tabpanel" aria-labelledby="file-tab" data-mode-panel="file" hidden>
+                        <label for="single-file">JavaScript file</label>
+                        <input id="single-file" type="file" accept=".js,.mjs,.cjs">
+                        <p id="single-file-meta" class="muted">No file selected.</p>
                     </div>
-                </div>
-                <p id="result-meta" class="muted">Obfuscated output will appear here.</p>
-                <p id="project-counts" class="muted" hidden></p>
-                <pre class="code-preview"><code id="result-preview"></code></pre>
-                <div id="artifact-downloads" class="artifact-downloads" aria-label="Output artifacts"></div>
-                <section id="warnings-section" hidden>
-                    <h3>Warnings</h3>
-                    <div id="warnings"></div>
+
+                    <div id="project-panel" role="tabpanel" aria-labelledby="project-tab" data-mode-panel="project" hidden>
+                        <div class="project-pickers">
+                            <div>
+                                <label for="project-files">Choose files</label>
+                                <input id="project-files" type="file" accept=".js,.mjs,.cjs,.json" multiple>
+                            </div>
+                            <div>
+                                <label for="project-folder">Choose folder</label>
+                                <input id="project-folder" type="file" accept=".js,.mjs,.cjs,.json" multiple webkitdirectory>
+                            </div>
+                        </div>
+                        <p id="project-summary" class="muted">No project selected.</p>
+                        <ul id="project-manifest" class="file-manifest" aria-label="Uploaded project files"></ul>
+                        <label for="project-entry">Entry point</label>
+                        <select id="project-entry" disabled></select>
+                        <fieldset class="inline-options">
+                            <legend>Output</legend>
+                            <label><input type="radio" name="project-output" value="bundle" checked> Single bundle</label>
+                            <label><input type="radio" name="project-output" value="modules"> Preserve modules</label>
+                        </fieldset>
+                        <div id="bundle-format-field">
+                            <label for="bundle-format">Bundle format</label>
+                            <select id="bundle-format">
+                                <option value="esm">esm</option>
+                                <option value="iife">iife</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="error-region" class="message error" role="alert" aria-live="assertive"></div>
+                    <div class="job-actions">
+                        <button id="obfuscate" type="button" class="primary" disabled>
+                            <span class="button-glyph" aria-hidden="true">⌁</span>
+                            <span>Obfuscate code</span>
+                        </button>
+                        <button id="cancel" type="button" class="secondary-action" disabled>Cancel</button>
+                        <div class="progress-wrap"><span id="activity-orb" class="activity-orb" aria-hidden="true"></span><span id="progress" class="progress" role="status" aria-live="polite">Loading options…</span></div>
+                    </div>
                 </section>
-            </section>
-        </div>
 
-        <aside class="panel options-panel" aria-labelledby="options-heading">
-            <h2 id="options-heading">Options</h2>
-            <div id="option-controls"></div>
-            <details class="advanced-options">
-                <summary>Advanced JSON</summary>
-                <p class="muted">Every serializable option is editable here. Structured <code>browserEnvironment</code>, <code>identifierNamesCache</code>, <code>vmDefenseHook</code>, and <code>vmDefenseReaction</code> are advanced-only. <code>inputFileName</code> and <code>sourceMapFileName</code> are managed per job.</p>
-                <label for="options-json">Options JSON</label>
-                <textarea id="options-json" class="json-input" spellcheck="false" disabled></textarea>
-                <div id="options-error" class="message error" role="alert" aria-live="assertive"></div>
-                <button id="apply-options" type="button" disabled>Apply JSON</button>
-            </details>
-        </aside>
+                <section class="panel result-panel" aria-labelledby="result-heading">
+                    <div class="panel-topline"><span>Output channel</span><span class="panel-index">02</span></div>
+                    <div class="panel-heading">
+                        <div>
+                            <p class="eyebrow">Protected artifact</p>
+                            <h2 id="result-heading">Obfuscated result</h2>
+                        </div>
+                        <div id="result-actions" class="result-actions" hidden>
+                            <button id="copy-result" type="button">Copy</button>
+                            <button id="download-result" type="button">Download</button>
+                            <button id="download-all" type="button" hidden>Download all</button>
+                        </div>
+                    </div>
+                    <p id="result-meta" class="muted">Output telemetry will appear after processing.</p>
+                    <p id="project-counts" class="muted" hidden></p>
+                    <pre class="code-preview"><code id="result-preview"></code></pre>
+                    <div id="artifact-downloads" class="artifact-downloads" aria-label="Output artifacts"></div>
+                    <section id="warnings-section" hidden>
+                        <h3>Warnings</h3>
+                        <div id="warnings"></div>
+                    </section>
+                </section>
+            </div>
+
+            <aside class="panel options-panel" aria-labelledby="options-heading">
+                <div class="options-beacon" aria-hidden="true"><span></span></div>
+                <div class="panel-topline"><span>Protection matrix</span><span class="panel-index">03</span></div>
+                <div class="options-heading-row">
+                    <div>
+                        <p class="eyebrow">Configuration</p>
+                        <h2 id="options-heading">Defense controls</h2>
+                    </div>
+                    <span id="options-count" class="control-count">— controls</span>
+                </div>
+                <p class="options-intro">Tune transforms, runtime defenses, source maps and VM hardening from one surface.</p>
+                <div id="option-controls"></div>
+                <details class="advanced-options">
+                    <summary>Advanced JSON <span>Direct configuration</span></summary>
+                    <p class="muted">Every serializable option is editable here. Structured <code>browserEnvironment</code>, <code>identifierNamesCache</code>, <code>vmDefenseHook</code>, and <code>vmDefenseReaction</code> are advanced-only. <code>inputFileName</code> and <code>sourceMapFileName</code> are managed per job.</p>
+                    <label for="options-json">Options JSON</label>
+                    <textarea id="options-json" class="json-input" spellcheck="false" disabled></textarea>
+                    <div id="options-error" class="message error" role="alert" aria-live="assertive"></div>
+                    <button id="apply-options" type="button" disabled>Apply JSON</button>
+                </details>
+            </aside>
+        </div>
     </main>
+
+    <footer class="site-footer">
+        <span>LOCAL PROTECTION PIPELINE</span>
+        <span aria-hidden="true">//</span>
+        <span>No upload. No server round-trip.</span>
+    </footer>
 
     <script src="app.js"></script>
 </body>

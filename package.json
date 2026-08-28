@@ -25,6 +25,7 @@
     "@javascript-obfuscator/estraverse": "5.4.0",
     "acorn": "8.15.0",
     "acorn-import-attributes": "^1.9.5",
+    "animejs": "3.2.2",
     "assert": "2.1.0",
     "chalk": "4.1.2",
     "chance": "1.1.13",
@@ -48,6 +49,7 @@
   },
   "devDependencies": {
     "@istanbuljs/nyc-config-typescript": "1.0.2",
+    "@types/animejs": "3.1.13",
     "@types/chai": "4.3.20",
     "@types/chance": "1.1.7",
     "@types/escodegen": "0.0.10",

@@ -11,6 +11,7 @@ import {
     IOptionControlDescriptor
 } from './options-schema';
 import { OptionsState } from './options-state';
+import { animateModePanel, animateResult, initializeMotion, setProcessingMotion } from './motion';
 import { createProjectFileMap, normalizeProjectPath } from './project-files';
 import {
     IOutputArtifact,
@@ -144,7 +145,13 @@ function setInputMode(mode: TInputMode): void {
     }
 
     for (const panel of document.querySelectorAll<HTMLElement>('[data-mode-panel]')) {
-        panel.hidden = panel.dataset.modePanel !== mode;
+        const selected: boolean = panel.dataset.modePanel === mode;
+
+        panel.hidden = !selected;
+
+        if (selected) {
+            animateModePanel(panel);
+        }
     }
 
     clearError();
@@ -546,6 +553,12 @@ function renderOptionControls(): void {
 
         return fieldset;
     }));
+
+    const optionsCount: HTMLElement | null = document.querySelector<HTMLElement>('#options-count');
+
+    if (optionsCount !== null) {
+        optionsCount.textContent = `${optionControls.length} controls`;
+    }
 }
 
 function createArtifactBlob(artifact: IOutputArtifact): Blob {
@@ -639,6 +652,7 @@ function renderResult(response: Extract<TWorkerCompletionResponse, { type: 'succ
         return button;
     }));
     renderWarnings(response.warnings);
+    animateResult();
 }
 
 async function startObfuscation(): Promise<void> {
@@ -679,6 +693,7 @@ async function startObfuscation(): Promise<void> {
     progress.textContent = 'Starting…';
     refreshOptionControls();
     updateObfuscateAvailability();
+    setProcessingMotion(true);
 
     const startedAt: number = performance.now();
     const onProgress = (response: TProgressResponse): void => {
@@ -737,11 +752,13 @@ async function startObfuscation(): Promise<void> {
         isRunning = false;
         refreshOptionControls();
         updateObfuscateAvailability();
+        setProcessingMotion(false);
     }
 }
 
 renderOptionControls();
 refreshBundleFormatVisibility();
+initializeMotion();
 
 for (const tab of document.querySelectorAll<HTMLButtonElement>('[role="tab"]')) {
     tab.addEventListener('click', (): void => setInputMode(<TInputMode>tab.dataset.mode));
@@ -790,6 +807,7 @@ cancelButton.addEventListener('click', (): void => {
         progress.textContent = 'Idle';
         refreshOptionControls();
         updateObfuscateAvailability();
+        setProcessingMotion(false);
     }
 });
 copyResultButton.addEventListener('click', (): void => {
