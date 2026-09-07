@@ -2,6 +2,7 @@ Change Log
 
 v5.6.0
 ---
+* Fixed register-based VM resume values after `await`, `yield`, and `yield*`, preventing stale promises or yielded values from being read after suspension.
 * Fixed VM closure capture resolution for declarations inside `try`/`catch`/`finally`, switch cases, and loop headers and bodies.
 * Added VM support for arithmetic and bitwise compound property assignments, preserving receiver, key, and value evaluation order.
 * Fixed VM runtime self-bindings for named function expressions and closure access from parameter defaults, preserving strict-mode directives.

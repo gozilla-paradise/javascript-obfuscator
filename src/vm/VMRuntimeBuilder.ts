@@ -237,6 +237,7 @@ export class VMRuntimeBuilder implements IVMRuntimeBuilder {
             readonly registers: unknown[];
             readonly withStack: Record<string, unknown>[];
             suspended?: boolean;
+            suspendedRegister?: number;
         }
 
         const globals = globalThis as unknown as Record<string, unknown>;
@@ -1081,7 +1082,11 @@ export class VMRuntimeBuilder implements IVMRuntimeBuilder {
             if (resumeKind === THROW) {throw resumeValue;}
             if (resumeKind === RETURN) {return [RETURN, resumeValue, -1];}
             if (frame.suspended) {
-                frame.stack.push(resumeValue);
+                if (frame.suspendedRegister !== undefined) {
+                    frame.registers[frame.suspendedRegister] = resumeValue;
+                } else {
+                    frame.stack.push(resumeValue);
+                }
                 frame.suspended = false;
             }
 
@@ -1478,17 +1483,14 @@ export class VMRuntimeBuilder implements IVMRuntimeBuilder {
                             break;
                         }
                         case 46:
-                            frame.suspended = true;
-
-                            return [AWAIT, stack.pop(), frame.ip];
                         case 47:
-                            frame.suspended = true;
-
-                            return [YIELD, stack.pop(), frame.ip];
                         case 48:
                             frame.suspended = true;
+                            frame.suspendedRegister = registerDestinations?.[0];
 
-                            return [YIELD, stack.pop(), frame.ip, true];
+                            return opcode === 48
+                                ? [YIELD, stack.pop(), frame.ip, true]
+                                : [opcode === 46 ? AWAIT : YIELD, stack.pop(), frame.ip];
                         case 49: {
                             const closureCount = operands[3];
                             const computedKeyCount = operands[2];

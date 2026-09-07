@@ -89,6 +89,54 @@ describe('VMObfuscation', () => {
         assert.deepEqual(await execute(output, 'download(["first"])'), [true, 'first:0', 'done']);
     });
 
+    it('should read fulfilled values after register-based await suspensions', async () => {
+        const source: string = `
+            async function download(fetchContent) {
+                const files = {};
+                for (const name of ['first', 'second']) {
+                    const scraped = await fetchContent(name);
+                    files[name] = scraped.content;
+                }
+                return files;
+            }
+        `;
+        const output: string = JavaScriptObfuscator.obfuscate(source, {
+            vmObfuscation: true,
+            vmTargetFunctions: ['download'],
+            vmRegisterBased: true,
+            vmStackEncoding: true,
+            stringArray: false,
+            seed: 1
+        }).getObfuscatedCode();
+
+        assert.deepEqual(
+            await execute(output, 'download(async name => ({ content: name + " body" }))'),
+            { first: 'first body', second: 'second body' }
+        );
+    });
+
+    it('should pass resume values into register-based yield expressions', () => {
+        const output: string = JavaScriptObfuscator.obfuscate(`
+            function* chapter() {
+                const first = yield 'first';
+                const second = yield* [first];
+                return [first, second];
+            }
+        `, {
+            vmObfuscation: true,
+            vmTargetFunctions: ['chapter'],
+            vmRegisterBased: true,
+            vmStackEncoding: true,
+            stringArray: false,
+            seed: 1
+        }).getObfuscatedCode();
+        const iterator = execute(output, 'chapter()') as Generator<unknown, unknown, unknown>;
+
+        assert.deepEqual(iterator.next(), { value: 'first', done: false });
+        assert.deepEqual(iterator.next('body'), { value: 'body', done: false });
+        assert.deepEqual(iterator.next(), { value: ['body', undefined], done: true });
+    });
+
     it('should preserve named function expression identity and recursion inside VM closures', () => {
         const source: string = `
             function factory() {
