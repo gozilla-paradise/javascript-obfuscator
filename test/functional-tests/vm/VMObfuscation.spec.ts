@@ -26,6 +26,95 @@ describe('VMObfuscation', () => {
         assert.equal(execute(output, 'price(6,7)'), 42);
     });
 
+
+    it('should access userscript storage APIs supplied by the enclosing host scope', () => {
+        const source: string = `
+            function getLicenseState() {
+                function read() {
+                    if (typeof GM_getValue !== 'function') return 'unavailable';
+                    GM_setValue('license', 'active');
+                    const value = GM_getValue('license', 'missing');
+                    GM_deleteValue('license');
+                    return [value, GM_getValue('license', 'missing')];
+                }
+                return read();
+            }
+        `;
+        const output: string = JavaScriptObfuscator.obfuscate(source, {
+            vmObfuscation: true,
+            vmTargetFunctions: ['getLicenseState'],
+            vmRegisterBased: true,
+            vmStackEncoding: true,
+            seed: 1
+        }).getObfuscatedCode();
+        const values = new Map<string, string>();
+        const run = Function('GM_getValue', 'GM_setValue', 'GM_deleteValue',
+            `${output};return getLicenseState();`);
+
+        assert.deepEqual(run(
+            (key: string, fallback: string) => values.get(key) ?? fallback,
+            (key: string, value: string) => values.set(key, value),
+            (key: string) => values.delete(key)
+        ), ['active', 'missing']);
+        assert.equal(run(), 'unavailable');
+    });
+
+    it('should preserve host binding writes, typeof, deletion, and reference errors', () => {
+        const source: string = `
+            function probe() {
+                const before = counter++;
+                counter += 2;
+                let missingRead = false;
+                let earlyType = false;
+                try { absentHostBinding; } catch (error) {
+                    missingRead = error instanceof ReferenceError;
+                }
+                try { typeof laterHostBinding; } catch (error) {
+                    earlyType = error instanceof ReferenceError;
+                }
+                return [before, counter, typeof absentHostBinding,
+                    delete counter, missingRead, earlyType];
+            }
+        `;
+        const output: string = JavaScriptObfuscator.obfuscate(source, {
+            vmObfuscation: true,
+            vmTargetFunctions: ['probe'],
+            stringArray: false,
+            seed: 1
+        }).getObfuscatedCode();
+
+        assert.deepEqual(Function('counter', `
+            ${output}
+            const result = probe();
+            let laterHostBinding;
+            return [result, counter];
+        `)(4), [[4, 7, 'undefined', false, true, true], 7]);
+    });
+
+    it('should resolve host bindings only after checking with objects', () => {
+        const output: string = JavaScriptObfuscator.obfuscate(`
+            function probe(object) {
+                let before;
+                with (object) {
+                    before = hostCounter;
+                    hostCounter = before + 1;
+                }
+                return before;
+            }
+        `, {
+            vmObfuscation: true,
+            vmTargetFunctions: ['probe'],
+            stringArray: false,
+            seed: 1
+        }).getObfuscatedCode();
+
+        assert.deepEqual(Function('hostCounter', `
+            ${output}
+            const object = { hostCounter: 8 };
+            return [probe(object), object.hostCounter, probe({}), hostCounter];
+        `)(4), [8, 9, 4, 5]);
+    });
+
     it('should preserve closures, TDZ, patterns, iterators, and finally completions', () => {
         const source: string = `
             function outer(x, values) {

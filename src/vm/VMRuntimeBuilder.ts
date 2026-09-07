@@ -1166,26 +1166,14 @@ export class VMRuntimeBuilder implements IVMRuntimeBuilder {
                             frame.captures[operands[0]][1](value);
                             break;
                         }
-                        case 11: {
-                            const name = constants[operands[0]] as string;
-                            if (!(name in globalThis)) {throw new ReferenceError(`${name} is not defined`);}
-                            stack.push(globals[name]);
-                            break;
-                        }
-                        case 12: {
-                            const name = constants[operands[0]] as string;
-                            const value = stack[stack.length - 1];
-                            globals[name] = value;
-                            break;
-                        }
+                        case 11:
                         case 13:
-                            stack.push(Reflect.deleteProperty(globalThis, constants[operands[0]] as string));
+                        case 14:
+                            stack.push(frame.ops[operands[0]]());
                             break;
-                        case 14: {
-                            const name = constants[operands[0]] as string;
-                            stack.push(name in globals ? typeof globals[name] : 'undefined');
+                        case 12:
+                            frame.ops[operands[0]](stack[stack.length - 1]);
                             break;
-                        }
                         case 15:
                             if (frame.receiver === UNINITIALIZED_THIS) {
                                 throw new ReferenceError("Must call super constructor in derived class before accessing 'this' or returning from derived constructor");
@@ -1595,24 +1583,25 @@ export class VMRuntimeBuilder implements IVMRuntimeBuilder {
                                 }
                             }
                             if (!found) {
-                                if (!(name in globalThis)) {
-                                    throw new ReferenceError(`${name} is not defined`);
-                                }
-                                stack.push(globals[name]);
+                                stack.push(frame.ops[operands[1]]());
                             }
                             break;
                         }
                         case 58: {
                             const name = constants[operands[0]] as string;
                             const value = stack[stack.length - 1];
-                            let target: Record<string, unknown> = globals;
+                            let target: Record<string, unknown> | undefined;
                             for (let index = frame.withStack.length - 1; index >= 0; index--) {
                                 if (name in frame.withStack[index]) {
                                     target = frame.withStack[index];
                                     break;
                                 }
                             }
-                            target[name] = value;
+                            if (target) {
+                                target[name] = value;
+                            } else {
+                                frame.ops[operands[1]](value);
+                            }
                             break;
                         }
                         case 59:
@@ -1674,19 +1663,8 @@ export class VMRuntimeBuilder implements IVMRuntimeBuilder {
                                 getValue = frame.captures[operands[1]][0];
                                 setValue = frame.captures[operands[1]][1];
                             } else if (operands[0] === 2) {
-                                const name = constants[operands[1]] as string;
-                                getValue = () => {
-                                    if (!(name in globals)) {
-                                        throw new ReferenceError(`${name} is not defined`);
-                                    }
-
-                                    return globals[name];
-                                };
-                                setValue = (value: unknown) => {
-                                    globals[name] = value;
-
-                                    return value;
-                                };
+                                stack.push(frame.ops[operands[1]]());
+                                break;
                             } else if (operands[0] === 3) {
                                 const key = stack.pop() as PropertyKey;
                                 const object = stack.pop() as object;

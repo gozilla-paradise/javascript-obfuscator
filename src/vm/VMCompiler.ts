@@ -1675,7 +1675,7 @@ export class VMCompiler implements IVMCompiler {
                 VMCompiler.emit(
                     context,
                     VMOpcode.TypeofGlobal,
-                    context.constants.add([VMConstantTag.String, name])
+                    VMCompiler.createHostOperation(context, expression)
                 );
 
                 return;
@@ -1689,7 +1689,7 @@ export class VMCompiler implements IVMCompiler {
                 VMCompiler.emit(
                     context,
                     VMOpcode.DeleteGlobal,
-                    context.constants.add([VMConstantTag.String, name])
+                    VMCompiler.createHostOperation(context, expression)
                 );
             }
 
@@ -1753,7 +1753,7 @@ export class VMCompiler implements IVMCompiler {
                 context,
                 VMOpcode.UpdateReference,
                 VMReferenceKind.Global,
-                context.constants.add([VMConstantTag.String, expression.argument.name]),
+                VMCompiler.createHostOperation(context, expression),
                 updateOperator
             );
 
@@ -2497,11 +2497,13 @@ export class VMCompiler implements IVMCompiler {
 
             return;
         }
+        const operationIndex: number = VMCompiler.createHostOperation(context, { type: 'Identifier', name });
         if (context.withDepth > 0) {
             VMCompiler.emit(
                 context,
                 VMOpcode.ResolveName,
-                context.constants.add([VMConstantTag.String, name])
+                context.constants.add([VMConstantTag.String, name]),
+                operationIndex
             );
 
             return;
@@ -2509,7 +2511,7 @@ export class VMCompiler implements IVMCompiler {
         VMCompiler.emit(
             context,
             VMOpcode.GetGlobal,
-            context.constants.add([VMConstantTag.String, name])
+            operationIndex
         );
     }
 
@@ -2530,11 +2532,19 @@ export class VMCompiler implements IVMCompiler {
 
             return;
         }
+        const value: ESTree.Identifier = { type: 'Identifier', name: `${name}$value` };
+        const operationIndex: number = VMCompiler.createHostOperation(context, {
+            type: 'AssignmentExpression',
+            operator: '=',
+            left: { type: 'Identifier', name },
+            right: value
+        }, [value]);
         if (context.withDepth > 0) {
             VMCompiler.emit(
                 context,
                 VMOpcode.SetName,
-                context.constants.add([VMConstantTag.String, name])
+                context.constants.add([VMConstantTag.String, name]),
+                operationIndex
             );
             if (!preserve) {
                 VMCompiler.emit(context, VMOpcode.Pop);
@@ -2545,7 +2555,7 @@ export class VMCompiler implements IVMCompiler {
         VMCompiler.emit(
             context,
             VMOpcode.SetGlobal,
-            context.constants.add([VMConstantTag.String, name])
+            operationIndex
         );
         if (!preserve) {
             VMCompiler.emit(context, VMOpcode.Pop);
@@ -2926,6 +2936,19 @@ export class VMCompiler implements IVMCompiler {
             },
             arguments: value ? [value] : []
         };
+    }
+
+    // Host bindings may live in a wrapper scope rather than on globalThis.
+    // Keep access lazy so missing names and TDZ retain native semantics.
+    private static createHostOperation(
+        context: IVMCompileContext,
+        expression: ESTree.Expression,
+        params: ESTree.Pattern[] = []
+    ): number {
+        const operationIndex: number = context.operations.length;
+        context.operations.push(VMCompiler.createOperation(params, NodeUtils.clone(expression)));
+
+        return operationIndex;
     }
 
     private static createOperation(

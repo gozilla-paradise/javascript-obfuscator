@@ -2,6 +2,7 @@ Change Log
 
 v5.6.0
 ---
+* Fixed VM external identifier access to preserve the enclosing host scope instead of assuming global-object properties, restoring userscript GM APIs supplied by Tampermonkey.
 * Fixed register-based VM resume values after `await`, `yield`, and `yield*`, preventing stale promises or yielded values from being read after suspension.
 * Fixed VM closure capture resolution for declarations inside `try`/`catch`/`finally`, switch cases, and loop headers and bodies.
 * Added VM support for arithmetic and bitwise compound property assignments, preserving receiver, key, and value evaluation order.
