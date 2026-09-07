@@ -6,6 +6,82 @@ export interface IVMSyntaxMatrixFixture {
 
 export const VM_SYNTAX_MATRIX: readonly IVMSyntaxMatrixFixture[] = [
     {
+        name: 'whole optional chains with receiver binding and skipped side effects',
+        argument: 'null',
+        body: `
+            const events = [];
+            const object = { user: {
+                name: 'reader',
+                method(value) { return { result: this.name + value }; }
+            } };
+            let groupedThrows = false;
+            try { (input?.user).name; } catch (error) {
+                groupedThrows = error instanceof TypeError;
+            }
+            return [
+                input?.user.name ?? 'missing',
+                input?.[events.push('key')].method(events.push('argument')),
+                object?.user.method?.('!').result,
+                object?.user.absent?.(events.push('argument')).result,
+                events,
+                groupedThrows
+            ];
+        `
+    },
+    {
+        name: 'closure captures in loop headers bodies switch and catch blocks',
+        argument: '[2, 3]',
+        body: `
+            const values = [];
+            for (let index = 0; index < input.length; index++) {
+                values.push((() => index)());
+            }
+            for (const item of input) {
+                const doubled = item * 2;
+                values.push((() => doubled)());
+            }
+            for (const key in { entry: 1 }) {
+                values.push((() => key)());
+            }
+            switch (input.length) {
+                case 2: {
+                    const matched = 'pair';
+                    values.push((() => matched)());
+                    break;
+                }
+            }
+            try {
+                throw 'caught';
+            } catch (error) {
+                const message = error + '!';
+                values.push((() => message)());
+            }
+            return values;
+        `
+    },
+    {
+        name: 'compound property assignment reference evaluation',
+        argument: '3',
+        body: `
+            const events = [];
+            let value = 7;
+            const object = {
+                get amount() { events.push('get'); return value; },
+                set amount(next) { events.push('set'); value = next; }
+            };
+            const key = {
+                [Symbol.toPrimitive](hint) { events.push(hint); return 'amount'; }
+            };
+            function receiver() { events.push('object'); return object; }
+            function right() { events.push('right'); value = 100; return input; }
+            const result = receiver()[key] *= right();
+            const symbol = Symbol('value');
+            const keyed = { [symbol]: 9n };
+            keyed[Object(symbol)] += 2n;
+            return [result, value, events, String(keyed[symbol])];
+        `
+    },
+    {
         name: 'objects methods arrays holes spread and loops',
         argument: '[2, 3]',
         body: `

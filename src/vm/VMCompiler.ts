@@ -51,6 +51,7 @@ interface IVMCompileContext {
     readonly finalizers: ESTree.BlockStatement[];
     withDepth: number;
     readonly captureNamesByNode: Map<TVMFunctionNode, readonly string[]>;
+    readonly flagsByNode: Map<TVMFunctionNode, number>;
     readonly operationsByNode: Map<
         TVMFunctionNode,
         readonly ESTree.ArrowFunctionExpression[]
@@ -148,6 +149,20 @@ export class VMCompiler implements IVMCompiler {
                 VMCompiler.collectCaptureNames(selected.node, scopeAnalyzer)
             ])
         );
+        const flagsByNode: Map<TVMFunctionNode, number> = new Map(
+            selection.map((selected: IVMSelectedFunction) => {
+                const acquiredScope = scopeAnalyzer.acquireScope(selected.node);
+                const functionScope = acquiredScope.type === 'function-expression-name'
+                    ? acquiredScope.childScopes[0]
+                    : acquiredScope;
+
+                return [
+                    selected.node,
+                    VMCompiler.getFunctionFlags(selected.node) |
+                        (functionScope.isStrict ? VMFunctionFlag.Strict : 0)
+                ];
+            })
+        );
         const operationsByNode: Map<
             TVMFunctionNode,
             readonly ESTree.ArrowFunctionExpression[]
@@ -160,8 +175,7 @@ export class VMCompiler implements IVMCompiler {
         for (const selected of compilationOrder) {
             const captures: readonly string[] =
                 captureNamesByNode.get(selected.node) ?? [];
-            const locals: Map<string, number> = VMCompiler.collectLocalBindings(selected.node);
-            const lexicalLocals: Set<string> = VMCompiler.collectLexicalBindings(selected.node);
+            const { locals, lexicalLocals } = VMCompiler.collectLocalBindings(selected.node);
             const context: IVMCompileContext = {
                 captures: new Map(
                     captures.map((name: string, index: number) => [name, index])
@@ -178,6 +192,7 @@ export class VMCompiler implements IVMCompiler {
                 finalizers: [],
                 withDepth: 0,
                 captureNamesByNode,
+                flagsByNode,
                 operationsByNode,
                 operations: []
             };
@@ -215,7 +230,7 @@ export class VMCompiler implements IVMCompiler {
             }
 
             VMCompiler.finalizeInstructions(context.instructions);
-            const flags: number = VMCompiler.getFunctionFlags(selected.node);
+            const flags: number = flagsByNode.get(selected.node)!;
             const vmFunction: IVMFunction = {
                 id: selected.id,
                 flags,
@@ -1838,6 +1853,33 @@ export class VMCompiler implements IVMCompiler {
         }
 
         if (
+            expression.left.type === 'MemberExpression' &&
+            expression.left.object.type !== 'Super' &&
+            expression.left.property.type !== 'PrivateIdentifier' &&
+            !['&&=', '||=', '??='].includes(expression.operator)
+        ) {
+            const objectSlot: number = VMCompiler.allocateTemporary(context, 'assignmentObject');
+            const keySlot: number = VMCompiler.allocateTemporary(context, 'assignmentKey');
+            VMCompiler.compileMemberReference(expression.left, context, selectionByNode);
+            VMCompiler.emit(context, VMOpcode.InitLocal, keySlot);
+            VMCompiler.emit(context, VMOpcode.InitLocal, objectSlot);
+            VMCompiler.emit(context, VMOpcode.GetLocal, objectSlot);
+            VMCompiler.emit(context, VMOpcode.GetLocal, keySlot);
+            VMCompiler.emit(context, VMOpcode.GetLocal, objectSlot);
+            VMCompiler.emit(context, VMOpcode.GetLocal, keySlot);
+            VMCompiler.emit(context, VMOpcode.GetProperty);
+            VMCompiler.compileExpression(expression.right, context, selectionByNode);
+            VMCompiler.emit(
+                context,
+                VMOpcode.Binary,
+                VMCompiler.getBinaryOperator(expression.operator.slice(0, -1))
+            );
+            VMCompiler.emit(context, VMOpcode.SetProperty);
+
+            return;
+        }
+
+        if (
             expression.operator === '=' &&
             (expression.left.type === 'ArrayPattern' ||
                 expression.left.type === 'ObjectPattern' ||
@@ -1864,173 +1906,88 @@ export class VMCompiler implements IVMCompiler {
         context: IVMCompileContext,
         selectionByNode: Map<TVMFunctionNode, IVMSelectedFunction>
     ): void {
-        const expression = chain.expression;
-
-        if (
-            expression.type === 'MemberExpression' &&
-            (<ESTree.MemberExpression & { optional?: boolean }>expression).optional
-        ) {
-            if (
-                expression.object.type === 'Super' ||
-                expression.property.type === 'PrivateIdentifier'
-            ) {
-                VMCompiler.throwUnsupported(expression);
-            }
-            VMCompiler.compileExpression(expression.object, context, selectionByNode);
+        const nullJumps: { instruction: MutableVMInstruction; values: number }[] = [];
+        const guard = (values: number): void => {
             VMCompiler.emit(context, VMOpcode.Dup);
-            const nullJump: MutableVMInstruction = VMCompiler.emit(
-                context,
-                VMOpcode.JumpIfNullish,
-                -1
-            );
-            if (expression.computed) {
-                VMCompiler.compileExpression(expression.property, context, selectionByNode);
+            nullJumps.push({
+                instruction: VMCompiler.emit(context, VMOpcode.JumpIfNullish, -1),
+                values
+            });
+        };
+        const compileMember = (member: ESTree.MemberExpression, receiver: boolean): void => {
+            if (member.object.type === 'Super' || member.property.type === 'PrivateIdentifier') {
+                VMCompiler.throwUnsupported(member);
+            }
+            compileElement(member.object);
+            if (member.optional) {
+                guard(1);
+            }
+            if (receiver) {
+                VMCompiler.emit(context, VMOpcode.Dup);
+            }
+            if (member.computed) {
+                VMCompiler.compileExpression(member.property, context, selectionByNode);
             } else {
                 VMCompiler.emitConstant(context, [
                     VMConstantTag.String,
-                    (expression.property as ESTree.Identifier).name
+                    (member.property as ESTree.Identifier).name
                 ]);
             }
             VMCompiler.emit(context, VMOpcode.GetProperty);
-            const endJump: MutableVMInstruction = VMCompiler.emit(
-                context,
-                VMOpcode.Jump,
-                -1
-            );
-            nullJump.operands[0] = context.instructions.length;
-            VMCompiler.emit(context, VMOpcode.Pop);
-            VMCompiler.emitConstant(context, [VMConstantTag.Undefined]);
-            endJump.operands[0] = context.instructions.length;
+        };
+        const compileElement = (expression: ESTree.Expression | ESTree.Super): void => {
+            if (expression.type === 'Super') {
+                VMCompiler.throwUnsupported(expression);
+            }
+            if (expression.type === 'MemberExpression') {
+                compileMember(expression, false);
 
+                return;
+            }
+            if (expression.type === 'CallExpression') {
+                const method: boolean = expression.callee.type === 'MemberExpression';
+                if (expression.callee.type === 'MemberExpression') {
+                    compileMember(expression.callee, true);
+                } else {
+                    compileElement(expression.callee);
+                }
+                if (expression.optional) {
+                    guard(method ? 2 : 1);
+                }
+                VMCompiler.compileArguments(expression.arguments, context, selectionByNode);
+                VMCompiler.emit(
+                    context,
+                    method ? VMOpcode.CallMethod : VMOpcode.Call,
+                    expression.arguments.length,
+                    VMCompiler.addSpreadMask(expression.arguments, context)
+                );
+
+                return;
+            }
+            VMCompiler.compileExpression(expression, context, selectionByNode);
+        };
+
+        compileElement(chain.expression);
+        if (nullJumps.length === 0) {
             return;
         }
-
-        if (expression.type === 'CallExpression') {
-            const optionalCall: boolean = (
-                expression as ESTree.CallExpression & { optional?: boolean }
-            ).optional === true;
-            if (expression.callee.type === 'MemberExpression') {
-                const optionalObject: boolean = (
-                    expression.callee as ESTree.MemberExpression & {
-                        optional?: boolean;
-                    }
-                ).optional === true;
-                if (
-                    expression.callee.object.type === 'Super' ||
-                    expression.callee.property.type === 'PrivateIdentifier'
-                ) {
-                    VMCompiler.throwUnsupported(expression);
+        const endJump: MutableVMInstruction = VMCompiler.emit(context, VMOpcode.Jump, -1);
+        if (nullJumps.some((jump) => jump.values === 2)) {
+            for (const jump of nullJumps) {
+                if (jump.values === 2) {
+                    jump.instruction.operands[0] = context.instructions.length;
                 }
-                VMCompiler.compileExpression(
-                    expression.callee.object,
-                    context,
-                    selectionByNode
-                );
-                let objectNullJump: MutableVMInstruction | null = null;
-                let callNullJump: MutableVMInstruction | null = null;
-                if (optionalObject) {
-                    VMCompiler.emit(context, VMOpcode.Dup);
-                    objectNullJump = VMCompiler.emit(
-                        context,
-                        VMOpcode.JumpIfNullish,
-                        -1
-                    );
-                }
-                VMCompiler.emit(context, VMOpcode.Dup);
-                if (expression.callee.computed) {
-                    VMCompiler.compileExpression(
-                        expression.callee.property,
-                        context,
-                        selectionByNode
-                    );
-                } else {
-                    VMCompiler.emitConstant(context, [
-                        VMConstantTag.String,
-                        (expression.callee.property as ESTree.Identifier).name
-                    ]);
-                }
-                VMCompiler.emit(context, VMOpcode.GetProperty);
-                if (optionalCall) {
-                    VMCompiler.emit(context, VMOpcode.Dup);
-                    callNullJump = VMCompiler.emit(
-                        context,
-                        VMOpcode.JumpIfNullish,
-                        -1
-                    );
-                }
-                VMCompiler.compileArguments(expression.arguments, context, selectionByNode);
-                VMCompiler.emit(
-                    context,
-                    VMOpcode.CallMethod,
-                    expression.arguments.length,
-                    VMCompiler.addSpreadMask(expression.arguments, context)
-                );
-                if (objectNullJump || callNullJump) {
-                    const successEndJump: MutableVMInstruction = VMCompiler.emit(
-                        context,
-                        VMOpcode.Jump,
-                        -1
-                    );
-                    let callNullEndJump: MutableVMInstruction | null = null;
-                    if (callNullJump) {
-                        callNullJump.operands[0] = context.instructions.length;
-                        VMCompiler.emit(context, VMOpcode.Pop);
-                        VMCompiler.emit(context, VMOpcode.Pop);
-                        VMCompiler.emitConstant(context, [VMConstantTag.Undefined]);
-                        callNullEndJump = VMCompiler.emit(
-                            context,
-                            VMOpcode.Jump,
-                            -1
-                        );
-                    }
-                    if (objectNullJump) {
-                        objectNullJump.operands[0] = context.instructions.length;
-                        VMCompiler.emit(context, VMOpcode.Pop);
-                        VMCompiler.emitConstant(context, [VMConstantTag.Undefined]);
-                    }
-                    const endAddress: number = context.instructions.length;
-                    successEndJump.operands[0] = endAddress;
-                    if (callNullEndJump) {
-                        callNullEndJump.operands[0] = endAddress;
-                    }
-                }
-
-                return;
             }
-
-            if (optionalCall) {
-                if (expression.callee.type === 'Super') {
-                    VMCompiler.throwUnsupported(expression);
-                }
-                VMCompiler.compileExpression(expression.callee, context, selectionByNode);
-                VMCompiler.emit(context, VMOpcode.Dup);
-                const nullJump: MutableVMInstruction = VMCompiler.emit(
-                    context,
-                    VMOpcode.JumpIfNullish,
-                    -1
-                );
-                VMCompiler.compileArguments(expression.arguments, context, selectionByNode);
-                VMCompiler.emit(
-                    context,
-                    VMOpcode.Call,
-                    expression.arguments.length,
-                    VMCompiler.addSpreadMask(expression.arguments, context)
-                );
-                const endJump: MutableVMInstruction = VMCompiler.emit(
-                    context,
-                    VMOpcode.Jump,
-                    -1
-                );
-                nullJump.operands[0] = context.instructions.length;
-                VMCompiler.emit(context, VMOpcode.Pop);
-                VMCompiler.emitConstant(context, [VMConstantTag.Undefined]);
-                endJump.operands[0] = context.instructions.length;
-
-                return;
+            VMCompiler.emit(context, VMOpcode.Pop);
+        }
+        for (const jump of nullJumps) {
+            if (jump.values === 1) {
+                jump.instruction.operands[0] = context.instructions.length;
             }
         }
-
-        VMCompiler.compileExpression(expression, context, selectionByNode);
+        VMCompiler.emit(context, VMOpcode.Pop);
+        VMCompiler.emitConstant(context, [VMConstantTag.Undefined]);
+        endJump.operands[0] = context.instructions.length;
     }
 
     private static compileMemberAssignment(
@@ -2457,6 +2414,15 @@ export class VMCompiler implements IVMCompiler {
         const operands: number[] = [selected.id, externalCaptureNames.length];
 
         externalCaptureNames.forEach((name: string) => {
+            if (selected.node.type === 'FunctionExpression' && selected.node.id?.name === name) {
+                operands.push(
+                    VMCaptureSource.Self,
+                    (context.flagsByNode.get(selected.node)! & VMFunctionFlag.Strict) !== 0 ? 1 : 0
+                );
+
+                return;
+            }
+
             const localSlot: number | undefined = context.locals.get(name);
             if (localSlot !== undefined) {
                 operands.push(VMCaptureSource.Local, localSlot);
@@ -2477,21 +2443,28 @@ export class VMCompiler implements IVMCompiler {
             context.operations.length;
         const parameterBindings: readonly string[] =
             VMCompiler.collectParameterBindings(selected.node.params);
-        context.operations.push({
+        const parameterAdapter: ESTree.ArrowFunctionExpression = {
             type: 'ArrowFunctionExpression',
             async: false,
             expression: true,
             generator: false,
-            params: selected.node.params.map((parameter: ESTree.Pattern) =>
-                NodeUtils.clone(parameter)
-            ),
+            params: selected.node.params,
             body: {
                 type: 'ArrayExpression',
                 elements: parameterBindings.map((name: string) =>
                     VMCompiler.createCaptureAdapter(name)
                 )
             }
-        });
+        };
+        context.operations.push(
+            VMCompiler.createOperation(
+                [{ type: 'Identifier', name: '__cells' }],
+                VMCompiler.bindNativeExpression(
+                    parameterAdapter,
+                    new Map(externalCaptureNames.map((name: string, index: number) => [name, index]))
+                )
+            )
+        );
         operands.push(parameterAdapterOperationIndex);
         const nestedOperationsIndex: number = context.operations.length;
         const nestedOperations: readonly ESTree.ArrowFunctionExpression[] =
@@ -2540,40 +2513,6 @@ export class VMCompiler implements IVMCompiler {
         );
     }
 
-    private static collectLexicalBindings(node: TVMFunctionNode): Set<string> {
-        const names: Set<string> = new Set();
-        const visitStatement = (statement: ESTree.Statement): void => {
-            switch (statement.type) {
-                case 'BlockStatement':
-                    statement.body.forEach(visitStatement);
-                    break;
-                case 'VariableDeclaration':
-                    if (statement.kind !== 'var') {
-                        statement.declarations.forEach((declaration: ESTree.VariableDeclarator) => {
-                            const declaredNames: string[] = [];
-                            VMCompiler.collectPatternNames(declaration.id, declaredNames);
-                            declaredNames.forEach((name: string) => names.add(name));
-                        });
-                    }
-                    break;
-                case 'IfStatement':
-                    visitStatement(statement.consequent);
-                    if (statement.alternate) {visitStatement(statement.alternate);}
-                    break;
-                case 'WhileStatement':
-                case 'DoWhileStatement':
-                case 'ForStatement':
-                    visitStatement(statement.body);
-                    break;
-            }
-        };
-
-        if (node.body.type === 'BlockStatement') {
-            node.body.body.forEach(visitStatement);
-        }
-
-        return names;
-    }
 
     private static storeIdentifier(context: IVMCompileContext, name: string, preserve: boolean): void {
         const localSlot: number | undefined = context.locals.get(name);
@@ -2613,40 +2552,64 @@ export class VMCompiler implements IVMCompiler {
         }
     }
 
-    private static collectLocalBindings(node: TVMFunctionNode): Map<string, number> {
+    private static collectLocalBindings(node: TVMFunctionNode): {
+        locals: Map<string, number>;
+        lexicalLocals: Set<string>;
+    } {
+        const locals: Map<string, number> = new Map();
+        const lexicalLocals: Set<string> = new Set();
         const names: string[] = [];
-        const visitStatement = (statement: ESTree.Statement): void => {
-            switch (statement.type) {
-                case 'BlockStatement':
-                    statement.body.forEach(visitStatement);
-                    break;
-                case 'VariableDeclaration':
-                    statement.declarations.forEach((declaration: ESTree.VariableDeclarator) => {
-                        VMCompiler.collectPatternNames(declaration.id, names);
-                    });
-                    break;
-                case 'FunctionDeclaration':
-                    if (statement.id && !names.includes(statement.id.name)) {
-                        names.push(statement.id.name);
+
+        // Traverse every statement container, but never another function or class body.
+        estraverse.traverse(node.body, {
+            enter: (child: ESTree.Node): estraverse.VisitorOption | void => {
+                names.length = 0;
+                let lexical: boolean = false;
+                let skip: boolean = false;
+
+                switch (child.type) {
+                    case 'VariableDeclaration':
+                        child.declarations.forEach((declaration: ESTree.VariableDeclarator) => {
+                            VMCompiler.collectPatternNames(declaration.id, names);
+                        });
+                        lexical = child.kind !== 'var';
+                        break;
+                    case 'CatchClause':
+                        if (child.param) {
+                            VMCompiler.collectPatternNames(child.param, names);
+                        }
+                        lexical = true;
+                        break;
+                    case 'FunctionDeclaration':
+                    case 'ClassDeclaration':
+                        if (child.id) {
+                            names.push(child.id.name);
+                        }
+                        lexical = child.type === 'ClassDeclaration';
+                        skip = true;
+                        break;
+                    case 'FunctionExpression':
+                    case 'ArrowFunctionExpression':
+                    case 'ClassExpression':
+                        return estraverse.VisitorOption.Skip;
+                }
+
+                for (const name of names) {
+                    if (!locals.has(name)) {
+                        locals.set(name, locals.size);
                     }
-                    break;
-                case 'IfStatement':
-                    visitStatement(statement.consequent);
-                    if (statement.alternate) {visitStatement(statement.alternate);}
-                    break;
-                case 'WhileStatement':
-                case 'DoWhileStatement':
-                case 'ForStatement':
-                    visitStatement(statement.body);
-                    break;
+                    if (lexical) {
+                        lexicalLocals.add(name);
+                    }
+                }
+
+                if (skip) {
+                    return estraverse.VisitorOption.Skip;
+                }
             }
-        };
+        });
 
-        if (node.body.type === 'BlockStatement') {
-            node.body.body.forEach(visitStatement);
-        }
-
-        return new Map(names.map((name: string, index: number) => [name, index]));
+        return { locals, lexicalLocals };
     }
 
     private static collectCaptureNames(
@@ -2655,6 +2618,13 @@ export class VMCompiler implements IVMCompiler {
     ): string[] {
         const names: string[] = VMCompiler.collectParameterBindings(node.params);
         const scope = scopeAnalyzer.acquireScope(node);
+        if (scope.type === 'function-expression-name') {
+            for (const variable of scope.variables) {
+                if (variable.references.length > 0 && !names.includes(variable.name)) {
+                    names.push(variable.name);
+                }
+            }
+        }
 
         for (const reference of scope.through) {
             if (
@@ -2710,13 +2680,12 @@ export class VMCompiler implements IVMCompiler {
         }
     }
 
-    private static createClassOperation(
-        expression: ESTree.ClassExpression,
-        context: IVMCompileContext
-    ): ESTree.ArrowFunctionExpression {
-        const clonedExpression: ESTree.ClassExpression =
-            NodeUtils.clone(expression);
-        const classProgram: ESTree.Program = NodeUtils.parentizeAst({
+    private static bindNativeExpression<T extends ESTree.Expression>(
+        expression: T,
+        slots: ReadonlyMap<string, number>
+    ): T {
+        const clonedExpression: T = NodeUtils.clone(expression);
+        const nativeProgram: ESTree.Program = NodeUtils.parentizeAst({
             type: 'Program',
             sourceType: 'script',
             body: [
@@ -2727,29 +2696,20 @@ export class VMCompiler implements IVMCompiler {
             ]
         });
         const scopeAnalyzer = new ScopeAnalyzer();
-        scopeAnalyzer.analyze(classProgram);
-        const rootScope = scopeAnalyzer.acquireScope(classProgram);
+        scopeAnalyzer.analyze(nativeProgram);
+        const rootScope = scopeAnalyzer.acquireScope(nativeProgram);
         const cellByIdentifier: WeakMap<ESTree.Identifier, number> =
             new WeakMap();
 
         rootScope.through.forEach((reference: eslintScope.Reference) => {
             const identifier = reference.identifier;
-            const localSlot = context.locals.get(identifier.name);
-            if (localSlot !== undefined) {
-                cellByIdentifier.set(identifier, localSlot);
-
-                return;
-            }
-            const captureSlot = context.captures.get(identifier.name);
-            if (captureSlot !== undefined) {
-                cellByIdentifier.set(
-                    identifier,
-                    context.locals.size + captureSlot
-                );
+            const slot: number | undefined = slots.get(identifier.name);
+            if (slot !== undefined) {
+                cellByIdentifier.set(identifier, slot);
             }
         });
 
-        const transformedExpression = estraverse.replace(clonedExpression, {
+        return estraverse.replace(clonedExpression, {
             leave: (
                 node: ESTree.Node,
                 parent: ESTree.Node | null
@@ -2764,7 +2724,7 @@ export class VMCompiler implements IVMCompiler {
                         return {
                             ...node,
                             shorthand: false,
-                            value: VMCompiler.createClassCellCall(cell, 0)
+                            value: VMCompiler.createCellCall(cell, 0)
                         };
                     }
 
@@ -2780,7 +2740,7 @@ export class VMCompiler implements IVMCompiler {
                     }
                     const assignmentOperator: string = node.operator;
                     if (assignmentOperator === '=') {
-                        return VMCompiler.createClassCellCall(
+                        return VMCompiler.createCellCall(
                             cell,
                             1,
                             node.right
@@ -2797,8 +2757,8 @@ export class VMCompiler implements IVMCompiler {
                                 0,
                                 -1
                             ) as ESTree.LogicalOperator,
-                            left: VMCompiler.createClassCellCall(cell, 0),
-                            right: VMCompiler.createClassCellCall(
+                            left: VMCompiler.createCellCall(cell, 0),
+                            right: VMCompiler.createCellCall(
                                 cell,
                                 1,
                                 node.right
@@ -2806,13 +2766,13 @@ export class VMCompiler implements IVMCompiler {
                         };
                     }
 
-                    return VMCompiler.createClassCellCall(cell, 1, {
+                    return VMCompiler.createCellCall(cell, 1, {
                         type: 'BinaryExpression',
                         operator: assignmentOperator.slice(
                             0,
                             -1
                         ) as ESTree.BinaryOperator,
-                        left: VMCompiler.createClassCellCall(cell, 0),
+                        left: VMCompiler.createCellCall(cell, 0),
                         right: node.right
                     });
                 }
@@ -2832,7 +2792,7 @@ export class VMCompiler implements IVMCompiler {
                         type: 'BinaryExpression',
                         operator: node.operator === '++' ? '+' : '-',
                         left: node.prefix
-                            ? VMCompiler.createClassCellCall(cell, 0)
+                            ? VMCompiler.createCellCall(cell, 0)
                             : oldValue,
                         right: {
                             type: 'Literal',
@@ -2840,7 +2800,7 @@ export class VMCompiler implements IVMCompiler {
                             raw: '1'
                         }
                     };
-                    const updateCall = VMCompiler.createClassCellCall(
+                    const updateCall = VMCompiler.createCellCall(
                         cell,
                         1,
                         updatedValue
@@ -2864,7 +2824,7 @@ export class VMCompiler implements IVMCompiler {
                             }
                         },
                         arguments: [
-                            VMCompiler.createClassCellCall(cell, 0)
+                            VMCompiler.createCellCall(cell, 0)
                         ]
                     };
                 }
@@ -2892,9 +2852,22 @@ export class VMCompiler implements IVMCompiler {
                     return node;
                 }
 
-                return VMCompiler.createClassCellCall(cell, 0);
+                return VMCompiler.createCellCall(cell, 0);
             }
-        }) as ESTree.ClassExpression;
+        }) as T;
+    }
+
+    private static createClassOperation(
+        expression: ESTree.ClassExpression,
+        context: IVMCompileContext
+    ): ESTree.ArrowFunctionExpression {
+        const slots: Map<string, number> = new Map(context.locals);
+        for (const [name, slot] of context.captures) {
+            if (!slots.has(name)) {
+                slots.set(name, context.locals.size + slot);
+            }
+        }
+        const transformedExpression = VMCompiler.bindNativeExpression(expression, slots);
 
         const superClass: ESTree.Identifier = {
             type: 'Identifier',
@@ -2919,7 +2892,7 @@ export class VMCompiler implements IVMCompiler {
         );
     }
 
-    private static createClassCellCall(
+    private static createCellCall(
         cell: number,
         operation: 0 | 1,
         value?: ESTree.Expression
@@ -2976,6 +2949,18 @@ export class VMCompiler implements IVMCompiler {
         flags: number,
         operations: readonly ESTree.ArrowFunctionExpression[]
     ): void {
+        const directives: ESTree.Statement[] = [];
+        if (node.body.type === 'BlockStatement') {
+            for (const statement of node.body.body) {
+                if (
+                    statement.type !== 'ExpressionStatement' ||
+                    typeof (statement as ESTree.ExpressionStatement & { directive?: string }).directive !== 'string'
+                ) {
+                    break;
+                }
+                directives.push(NodeUtils.clone(statement));
+            }
+        }
         const method: string =
             (flags & VMFunctionFlag.Async) !== 0
                 ? (flags & VMFunctionFlag.Generator) !== 0
@@ -3050,6 +3035,7 @@ export class VMCompiler implements IVMCompiler {
             node.body = {
                 type: 'BlockStatement',
                 body: [
+                    ...directives,
                     {
                         type: 'ReturnStatement',
                         argument: {
@@ -3066,7 +3052,7 @@ export class VMCompiler implements IVMCompiler {
         } else {
             node.body = {
                 type: 'BlockStatement',
-                body: [{ type: 'ReturnStatement', argument: call }]
+                body: [...directives, { type: 'ReturnStatement', argument: call }]
             };
             if (node.type === 'ArrowFunctionExpression') {node.expression = false;}
         }

@@ -86,17 +86,11 @@ export class VMBytecodeProtector implements IVMBytecodeProtector {
 
             instructions = instructions.map((instruction: IVMInstruction) => {
                 const operands: number[] = [...instruction.operands];
-                if (
-                    this.options.vmJumpsEncoding &&
-                    [
-                        VMOpcode.Jump,
-                        VMOpcode.JumpIfTrue,
-                        VMOpcode.JumpIfFalse,
-                        VMOpcode.JumpIfNullish
-                    ].includes(instruction.opcode)
-                ) {
-                    operands[0] =
-                        (operands[0] - instruction.address) ^ jumpKey;
+                const jumpOperandIndex: number | undefined =
+                    VMBytecodeProtector.getJumpOperandIndex(instruction);
+                if (this.options.vmJumpsEncoding && jumpOperandIndex !== undefined) {
+                    operands[jumpOperandIndex] =
+                        (operands[jumpOperandIndex] - instruction.address) ^ jumpKey;
                 }
 
                 usedOpcodes.add(instruction.opcode);
@@ -288,6 +282,25 @@ export class VMBytecodeProtector implements IVMBytecodeProtector {
         ];
     }
 
+    private static getJumpOperandIndex(instruction: IVMInstruction): number | undefined {
+        const registerMode: boolean = instruction.opcode >= 256 && instruction.opcode < 384;
+        const opcode: number = registerMode ? instruction.opcode - 256 : instruction.opcode;
+        if (
+            opcode !== VMOpcode.Jump &&
+            opcode !== VMOpcode.JumpIfTrue &&
+            opcode !== VMOpcode.JumpIfFalse &&
+            opcode !== VMOpcode.JumpIfNullish
+        ) {
+            return undefined;
+        }
+        if (!registerMode) {
+            return 0;
+        }
+        const sourceCountIndex: number = instruction.operands[0] + 1;
+
+        return sourceCountIndex + 1 + instruction.operands[sourceCountIndex];
+    }
+
     private assignLogicalAddresses(
         instructions: readonly IVMInstruction[],
         exceptionTable: readonly IVMExceptionRow[]
@@ -299,19 +312,14 @@ export class VMBytecodeProtector implements IVMBytecodeProtector {
         const normalizedInstructions: IVMInstruction[] = instructions.map(
             (instruction: IVMInstruction, index: number) => {
                 const operands: number[] = [...instruction.operands];
-                if (
-                    [
-                        VMOpcode.Jump,
-                        VMOpcode.JumpIfTrue,
-                        VMOpcode.JumpIfFalse,
-                        VMOpcode.JumpIfNullish
-                    ].includes(instruction.opcode)
-                ) {
-                    const target: number | undefined = addressMap.get(operands[0]);
+                const jumpOperandIndex: number | undefined =
+                    VMBytecodeProtector.getJumpOperandIndex(instruction);
+                if (jumpOperandIndex !== undefined) {
+                    const target: number | undefined = addressMap.get(operands[jumpOperandIndex]);
                     if (target === undefined) {
-                        throw new Error(`Invalid VM jump target ${operands[0]}`);
+                        throw new Error(`Invalid VM jump target ${operands[jumpOperandIndex]}`);
                     }
-                    operands[0] = target;
+                    operands[jumpOperandIndex] = target;
                 }
                 const nextAddress: number =
                     instruction.nextAddress === -1

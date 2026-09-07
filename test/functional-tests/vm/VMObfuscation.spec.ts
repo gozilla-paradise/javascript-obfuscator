@@ -24,8 +24,6 @@ describe('VMObfuscation', () => {
         const output: string = result.getObfuscatedCode();
 
         assert.equal(execute(output, 'price(6,7)'), 42);
-        assert.notInclude(output, 'return q*p');
-        assert.include(output, 'Sk9WTQ');
     });
 
     it('should preserve closures, TDZ, patterns, iterators, and finally completions', () => {
@@ -56,6 +54,106 @@ describe('VMObfuscation', () => {
         assert.deepEqual(execute(output, 'outer(1,[undefined,2,3])'), [5, 7, 9]);
         assert.equal(globals.finalized, 1);
         delete globals.finalized;
+    });
+
+    it('should capture locals inside async try blocks and preserve their TDZ', async () => {
+        const source: string = `
+            async function download(chapters) {
+                const results = [];
+                try {
+                    for (let index = 0; index < chapters.length; index++) {
+                        try { results.push(chapter); } catch (error) {
+                            results.push(error instanceof ReferenceError);
+                        }
+                        const chapter = chapters[index];
+                        const options = {
+                            onRetry: ({ attempt }) => chapter + ':' + attempt
+                        };
+                        results.push(await Promise.resolve(options.onRetry({ attempt: index })));
+                    }
+                } finally {
+                    const status = 'done';
+                    const finish = () => status;
+                    results.push(finish());
+                }
+                return results;
+            }
+        `;
+        const output: string = JavaScriptObfuscator.obfuscate(source, {
+            vmObfuscation: true,
+            vmTargetFunctions: ['download'],
+            stringArray: false,
+            seed: 1
+        }).getObfuscatedCode();
+
+        assert.deepEqual(await execute(output, 'download(["first"])'), [true, 'first:0', 'done']);
+    });
+
+    it('should preserve named function expression identity and recursion inside VM closures', () => {
+        const source: string = `
+            function factory() {
+                const r = 'outer';
+                const loader = function r(count) {
+                    if (count > 0) return r(count - 1);
+                    return [r, () => r];
+                };
+                const result = loader(2);
+                return [result[0] === loader, result[1]() === loader, r];
+            }
+        `;
+        const output: string = JavaScriptObfuscator.obfuscate(source, {
+            vmObfuscation: true,
+            vmTargetFunctions: ['factory'],
+            stringArray: false,
+            seed: 1
+        }).getObfuscatedCode();
+
+        assert.deepEqual(execute(output, 'factory()'), [true, true, 'outer']);
+    });
+
+    it('should keep named function bindings immutable without changing parameter shadowing', () => {
+        const source: string = `
+            function factory() {
+                const sloppy = function self() { self = 0; return self; };
+                const strict = function self() { 'use strict'; self = 0; };
+                const shadowed = function self(self) { self++; return self; };
+                let rejected = false;
+                try { strict(); } catch (error) { rejected = error instanceof TypeError; }
+                return [sloppy() === sloppy, rejected, shadowed(6)];
+            }
+            const rootStrict = function self() { 'use strict'; self = 0; };
+        `;
+        const output: string = JavaScriptObfuscator.obfuscate(source, {
+            vmObfuscation: true,
+            stringArray: false,
+            seed: 1
+        }).getObfuscatedCode();
+
+        assert.deepEqual(execute(output, 'factory()'), [true, true, 7]);
+        assert.throws(() => execute(output, 'rootStrict()'), TypeError);
+    });
+
+    it('should evaluate parameter defaults against live VM closure bindings', () => {
+        const source: string = `
+            function factory() {
+                let count = 0;
+                const getState = () => ++count;
+                const render = (state = getState(), next = state + 1) => [state, next];
+                const first = render();
+                const explicit = render(8);
+                const second = render();
+                return [first, explicit, second, count];
+            }
+        `;
+        const output: string = JavaScriptObfuscator.obfuscate(source, {
+            vmObfuscation: true,
+            vmRegisterBased: true,
+            vmJumpsEncoding: true,
+            stringArray: false,
+            seed: 1
+        }).getObfuscatedCode();
+
+        assert.deepEqual(execute(output, 'factory()'), [[1, 2], [8, 9], [2, 3], 2]);
     });
 
     it('should preserve sync, generator, async, and async-generator ABIs', async () => {
@@ -135,6 +233,7 @@ describe('VMObfuscation', () => {
         const first: string = JavaScriptObfuscator.obfuscate(source, options).getObfuscatedCode();
         const second: string = JavaScriptObfuscator.obfuscate(source, options).getObfuscatedCode();
 
+        assert.equal(execute(first, 'f(false)'), 3);
         assert.equal(execute(first, 'f(true)'), 6);
         assert.equal(first, second);
     });

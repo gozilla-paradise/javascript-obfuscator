@@ -1350,16 +1350,29 @@ export class VMRuntimeBuilder implements IVMRuntimeBuilder {
                             for (let index = 0; index < operands[1]; index++) {
                                 const source = operands[2 + index * 2];
                                 const captureIndex = operands[3 + index * 2];
-                                closureCaptures.push(source === 0 ? [
-                                    () => frame.locals[captureIndex].value,
-                                    (value: unknown) => (frame.locals[captureIndex].value = value)
-                                ] : frame.captures[captureIndex]);
+                                if (source === 2) {
+                                    closureCaptures.push([
+                                        () => closure,
+                                        (value: unknown) => {
+                                            if (captureIndex) {
+                                                throw new TypeError('Assignment to constant variable.');
+                                            }
+
+                                            return value;
+                                        }
+                                    ]);
+                                } else {
+                                    closureCaptures.push(source === 0 ? [
+                                        () => frame.locals[captureIndex].value,
+                                        (value: unknown) => (frame.locals[captureIndex].value = value)
+                                    ] : frame.captures[captureIndex]);
+                                }
                             }
                             const nested = functions.get(functionId)!;
                             const nestedFlags = nested[1] as number;
                             const captureOperandEnd = 2 + operands[1] * 2;
                             const parameterAdapterOperation =
-                                frame.ops[operands[captureOperandEnd]];
+                                frame.ops[operands[captureOperandEnd]](closureCaptures) as TRuntimeOperation;
                             const nestedOperations = frame.ops[
                                 operands[captureOperandEnd + 1]
                             ]() as TRuntimeOperation[];

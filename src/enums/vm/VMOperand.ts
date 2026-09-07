@@ -41,7 +41,8 @@ export enum VMUpdateOperator {
 
 export enum VMCaptureSource {
     Local = 0,
-    Capture = 1
+    Capture = 1,
+    Self = 2
 }
 
 export enum VMReferenceKind {
